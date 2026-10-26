@@ -1,0 +1,27 @@
+# owner: Dfyoimiya
+# owner group: SQL
+# tags: rewrite,resolver
+# description: Regression for issue #1477. Eliminating an even number of NOT
+#              operators used to replace the boolean result directly with its
+#              operand, whose integer type is wider (comparison/LIKE return
+#              BIGINT while NOT returns INT). IFNULL formalize then deduced a
+#              new result type and tried to stack a second implicit cast above
+#              the one created during the first deduction, failing with -4016.
+#              The two control cases from the issue are kept to prove their
+#              behavior is unchanged.
+#              See https://github.com/oceanbase/seekdb/issues/1477
+
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x')));
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE 'x'));
+SELECT 1 AS matched FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE 'x')));
+SELECT 1 AS matched FROM dual WHERE IFNULL(!(!(1 LIKE 'x')), (SELECT FALSE));
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT TRUE), !(!('a' LIKE 'a')));
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!('a' LIKE 'a')));
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!('a' LIKE 'b')));
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!(NULL LIKE 'a'))) IS NULL;
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 = 1)));
+SELECT CASE WHEN IFNULL(!(!(1 LIKE 'x')), (SELECT FALSE)) THEN 1 ELSE 0 END AS matched;
+SELECT IFNULL(NULL, !(!(1 LIKE 'x'))) AS matched;
+PREPARE stmt FROM 'SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE ''x'')))';
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;

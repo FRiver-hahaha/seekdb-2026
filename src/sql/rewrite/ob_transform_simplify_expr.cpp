@@ -26,6 +26,49 @@ using namespace oceanbase::sql;
 
 namespace
 {
+// Eliminating an even number of NOT operators replaces a boolean result with
+// its operand.  The operand is normally a comparison/LIKE expression, whose
+// integer type (BIGINT) is wider than the INT returned by NOT.  A value
+// context such as IFNULL/NVL argument must keep the original type, otherwise
+// re-formalizing the parent deduces another result type and tries to stack a
+// second implicit cast on the one added by the first deduction.  The cast is
+// lossless here: both sides only carry a boolean 0/1 value.
+int create_bool_expr_with_result_type(ObRawExpr *src_expr,
+                                      const ObRawExprResType &result_type,
+                                      ObRawExprFactory &expr_factory,
+                                      const ObSQLSessionInfo *session_info,
+                                      ObRawExpr *&bool_expr)
+{
+  int ret = OB_SUCCESS;
+  ObRawExpr *tmp_expr = NULL;
+  bool_expr = NULL;
+  if (OB_ISNULL(src_expr) || OB_ISNULL(session_info)) {
+    ret = OB_INVALID_ARGUMENT;
+    LOG_WARN("invalid argument", K(ret), K(src_expr), K(session_info));
+  } else if (OB_FAIL(ObRawExprUtils::try_create_bool_expr(src_expr,
+                                                          tmp_expr,
+                                                          expr_factory))) {
+    LOG_WARN("failed to create bool expr", K(ret));
+  } else if (OB_ISNULL(tmp_expr)) {
+    ret = OB_ERR_UNEXPECTED;
+    LOG_WARN("unexpected null bool expr", K(ret));
+  } else if (OB_FAIL(tmp_expr->formalize(session_info))) {
+    LOG_WARN("failed to formalize bool expr", K(ret));
+  } else if (OB_FAIL(ObRawExprUtils::try_add_cast_expr_above(&expr_factory,
+                                                              session_info,
+                                                              *tmp_expr,
+                                                              result_type,
+                                                              bool_expr))) {
+    LOG_WARN("failed to keep result type when eliminating NOT operators", K(ret));
+  } else if (OB_ISNULL(bool_expr)) {
+    ret = OB_ERR_UNEXPECTED;
+    LOG_WARN("unexpected null bool expr", K(ret));
+  } else if (bool_expr != tmp_expr && OB_FAIL(bool_expr->formalize(session_info))) {
+    LOG_WARN("failed to formalize cast expr", K(ret));
+  }
+  return ret;
+}
+
 int has_scalar_in_predicate(ObRawExpr *expr, bool &has_in)
 {
   int ret = OB_SUCCESS;
@@ -1274,11 +1317,11 @@ int ObTransformSimplifyExpr::inner_remove_dummy_nvl(ObDMLStmt *stmt,
       }
       if (OB_SUCC(ret) && not_cnt > 1 && 0 == not_cnt % 2) {
         ObRawExpr *new_child = NULL;
-        if (OB_FAIL(ObRawExprUtils::try_create_bool_expr(cur, new_child, *ctx_->expr_factory_))) {
-        } else if (OB_ISNULL(new_child)) {
-          ret = OB_ERR_UNEXPECTED;
-          LOG_WARN("unexpected null bool expr", K(ret));
-        } else if (OB_FAIL(new_child->formalize(ctx_->session_info_))) {
+        if (OB_FAIL(create_bool_expr_with_result_type(cur,
+                                                      child_0->get_result_type(),
+                                                      *ctx_->expr_factory_,
+                                                      ctx_->session_info_,
+                                                      new_child))) {
         } else {
           op_expr->get_param_expr(0) = new_child;
           if (OB_FAIL(expr->formalize(ctx_->session_info_))) {
@@ -2378,10 +2421,11 @@ int ObTransformSimplifyExpr::do_push_not(ObRawExpr *&expr,
       // size of not is even
       // not(not c1 > 1)) -> c1>1
       ObRawExpr *temp = NULL;
-      if (OB_FAIL(ObRawExprUtils::try_create_bool_expr(cur, temp, *expr_factory))) {
-      } else if (OB_ISNULL(temp)) {
-        ret = OB_ERR_UNEXPECTED;
-      } else if (OB_FAIL(temp->formalize(ctx_->session_info_))) {
+      if (OB_FAIL(create_bool_expr_with_result_type(cur,
+                                                    expr->get_result_type(),
+                                                    *expr_factory,
+                                                    ctx_->session_info_,
+                                                    temp))) {
       } else {
         expr = temp;
         is_valid = false;

@@ -1,0 +1,31 @@
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x')));
+matched
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE 'x'));
+matched
+SELECT 1 AS matched FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE 'x')));
+matched
+SELECT 1 AS matched FROM dual WHERE IFNULL(!(!(1 LIKE 'x')), (SELECT FALSE));
+matched
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT TRUE), !(!('a' LIKE 'a')));
+matched
+1
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!('a' LIKE 'a')));
+matched
+1
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!('a' LIKE 'b')));
+matched
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!(NULL LIKE 'a'))) IS NULL;
+matched
+1
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 = 1)));
+matched
+SELECT CASE WHEN IFNULL(!(!(1 LIKE 'x')), (SELECT FALSE)) THEN 1 ELSE 0 END AS matched;
+matched
+0
+SELECT IFNULL(NULL, !(!(1 LIKE 'x'))) AS matched;
+matched
+0
+PREPARE stmt FROM 'SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE ''x'')))';
+EXECUTE stmt;
+matched
+DEALLOCATE PREPARE stmt;
