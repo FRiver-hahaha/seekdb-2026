@@ -2382,6 +2382,11 @@ int ObTransformSimplifyExpr::do_push_not(ObRawExpr *&expr,
       } else if (OB_ISNULL(temp)) {
         ret = OB_ERR_UNEXPECTED;
       } else if (OB_FAIL(temp->formalize(ctx_->session_info_))) {
+      } else if (OB_FAIL(ObTransformUtils::add_cast_for_replace_if_need(
+                            *expr_factory, expr, temp, ctx_->session_info_))) {
+        // Preserve NOT's result type. For example, LIKE returns BIGINT while
+        // NOT returns INT32; widening an enclosing IFNULL here would require
+        // adding another implicit cast over its already-cast scalar subquery.
       } else {
         expr = temp;
         is_valid = false;

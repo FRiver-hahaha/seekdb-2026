@@ -1,0 +1,9 @@
+# Issue #1477: even NOT elimination must preserve the replaced expression type.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE "x")));
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE "x"));
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE "x")));
+SELECT IFNULL((SELECT NULL), !(!('x' LIKE 'x'))) AS result;
+SELECT IFNULL((SELECT NULL), !(!('z' LIKE 'x'))) AS result;
+SELECT IFNULL((SELECT NULL), !(!(NULL LIKE 'x'))) AS result;
+SELECT IFNULL((SELECT TRUE), !(!('z' LIKE 'x'))) AS result;
+SELECT IFNULL((SELECT NULL), !(!(!(!('x' LIKE 'x'))))) AS result;
