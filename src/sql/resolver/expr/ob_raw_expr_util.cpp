@@ -2694,17 +2694,17 @@ int ObRawExprUtils::try_add_cast_expr_above(ObRawExprFactory *expr_factory,
                   && (dst_type.is_character_type() || dst_type.is_null()))
             || (src_type.is_character_type() && dst_type.is_character_type())))
       {
-      ret = OB_ERR_UNEXPECTED;
-#ifdef DEBUG
-      LOG_ERROR("try to add implicit cast again, check if type deduction is correct",
-                K(ret), K(expr), K(dst_type),
-                K(session->get_current_query_string()));
-#else
-      LOG_WARN("try to add implicit cast again, check if type deduction is correct",
-                K(ret), K(expr), K(dst_type), K(src_type), K(ignore_dup_cast_error),
-                K(session->get_current_query_string()));
-#endif
-    } else {
+      // Adding a second implicit cast above an existing implicit cast used to abort
+      // type deduction with OB_ERR_UNEXPECTED. Keep the diagnostic, but build the
+      // cast instead of failing: an extra implicit conversion is well defined, and
+      // refusing it turns an otherwise valid statement into an internal error.
+      // See issue #1477 (IFNULL with a boolean scalar subquery and a double
+      // negated LIKE).
+      LOG_WARN("add another implicit cast above an existing implicit cast",
+               K(expr), K(dst_type), K(src_type), K(ignore_dup_cast_error),
+               K(session->get_current_query_string()));
+    }
+    {
       //setup implicit cast charset convert ignore error
       ObCastMode cm_zf = cm;
       if ((cm_zf & CM_COLUMN_CONVERT) != 0) {

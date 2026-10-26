@@ -1,0 +1,10 @@
+# owner: ZachNo1
+# owner group: sql
+# tags: resolver
+# description: IFNULL with a boolean scalar subquery and a double negated LIKE
+
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE "x")));
+
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE "x"));
+
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE "x")));
