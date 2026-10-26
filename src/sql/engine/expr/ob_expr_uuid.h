@@ -38,6 +38,9 @@ struct ObUUIDNode
 {
   ObUUIDNode();
   int init();
+  // RFC 4122 section 4.5: generate a random node ID with the multicast bit set,
+  // used when no physical MAC address can be read from the host.
+  static int gen_random_node_id(unsigned char *node);
   unsigned char mac_addr_[6];
   bool is_inited_;
 };
