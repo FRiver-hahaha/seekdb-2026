@@ -1,0 +1,23 @@
+# Issue #1477: simplifying NOT must preserve the type expected by IFNULL.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE "x")));
+
+# Controls from the original report.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE "x"));
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE "x")));
+
+# Both IFNULL branches, NULL, non-boolean values and longer NOT chains.
+SELECT 1 FROM dual WHERE IFNULL((SELECT TRUE), !(!(1 LIKE "x")));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(1 LIKE "1")));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(1 LIKE "x")));
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(!(!(1 LIKE "x")))));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(!(!(1 LIKE "1")))));
+SELECT IFNULL((SELECT 2), !(!(1 LIKE "x"))) AS value;
+
+# Repeated formalization must also work for row-dependent scalar subqueries.
+CREATE TABLE ifnull_double_not (id INT PRIMARY KEY, v INT);
+INSERT INTO ifnull_double_not VALUES (1, -2), (2, 0), (3, 1), (4, 3), (5, NULL);
+SELECT id FROM ifnull_double_not t
+WHERE IFNULL((SELECT t.v > 0), !(!(t.v LIKE "1"))) ORDER BY id;
+SELECT id, IFNULL((SELECT t.v), !(!(t.v LIKE "1"))) AS value
+FROM ifnull_double_not t ORDER BY id;
+DROP TABLE ifnull_double_not;
