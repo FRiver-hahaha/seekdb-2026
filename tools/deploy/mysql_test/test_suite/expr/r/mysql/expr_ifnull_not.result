@@ -1,0 +1,25 @@
+create table t_ifnull_not(a int primary key);
+insert into t_ifnull_not values(1);
+insert into t_ifnull_not values(2);
+select count(*) as c from t_ifnull_not where ifnull((select false), !(!(1 like 'x')));
+c
+0
+select count(*) as c from t_ifnull_not where ifnull((select false), not not (1 like 'x'));
+c
+0
+select count(*) as c from t_ifnull_not where ifnull((select null), !(!(1 like '1')));
+c
+2
+select count(*) as c from t_ifnull_not where ifnull((select null), !(!(1 like 'x')));
+c
+0
+select count(*) as c from t_ifnull_not where not not (1 like '1');
+c
+2
+select ifnull((select null), !(!(1 like '1'))) as v;
+v
+1
+select !(!(1=1)) as a, !(!(1=2)) as b;
+a	b
+1	0
+drop table t_ifnull_not;

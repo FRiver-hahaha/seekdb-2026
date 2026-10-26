@@ -54,6 +54,7 @@ psmall_test=[
 'expr.collation_expr',
 'expr.expr_ceil',
 'expr.expr_floor',
+'expr.expr_ifnull_not',
 'expr.expr_instr',
 'expr.expr_locate',
 'expr.expr_nseq',

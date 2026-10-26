@@ -1,0 +1,21 @@
+#### owner: jiyihanxing
+#### owner group: sql
+#### description: 测试 IFNULL 与偶数层 NOT 组合时的类型推导（issue #1477）
+--disable_query_log
+drop table if exists t_ifnull_not;
+--enable_query_log
+create table t_ifnull_not(a int primary key);
+insert into t_ifnull_not values(1);
+insert into t_ifnull_not values(2);
+# 原始复现：结果为 0 行，修复前报 ERROR 4016
+select count(*) as c from t_ifnull_not where ifnull((select false), !(!(1 like 'x')));
+# NOT NOT 写法与 !(!(...)) 等价
+select count(*) as c from t_ifnull_not where ifnull((select false), not not (1 like 'x'));
+# 第一参数为 NULL 时第二参数生效，双否定必须保留布尔语义
+select count(*) as c from t_ifnull_not where ifnull((select null), !(!(1 like '1')));
+select count(*) as c from t_ifnull_not where ifnull((select null), !(!(1 like 'x')));
+# 不含 IFNULL 的双否定
+select count(*) as c from t_ifnull_not where not not (1 like '1');
+select ifnull((select null), !(!(1 like '1'))) as v;
+select !(!(1=1)) as a, !(!(1=2)) as b;
+drop table t_ifnull_not;

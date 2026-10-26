@@ -2378,12 +2378,30 @@ int ObTransformSimplifyExpr::do_push_not(ObRawExpr *&expr,
       // size of not is even
       // not(not c1 > 1)) -> c1>1
       ObRawExpr *temp = NULL;
+      ObOpRawExpr *bool_expr = NULL;
       if (OB_FAIL(ObRawExprUtils::try_create_bool_expr(cur, temp, *expr_factory))) {
       } else if (OB_ISNULL(temp)) {
         ret = OB_ERR_UNEXPECTED;
       } else if (OB_FAIL(temp->formalize(ctx_->session_info_))) {
-      } else {
+      } else if (temp->get_result_type().get_type() == expr->get_result_type().get_type()) {
         expr = temp;
+        is_valid = false;
+        trans_happened = true;
+      } else if (OB_FAIL(expr_factory->create_raw_expr(T_OP_BOOL, bool_expr))) {
+      } else if (OB_ISNULL(bool_expr)) {
+        ret = OB_ERR_UNEXPECTED;
+      } else if (OB_FAIL(bool_expr->add_flag(IS_INNER_ADDED_EXPR))) {
+      } else if (OB_FAIL(bool_expr->set_param_expr(temp))) {
+      } else if (OB_FAIL(bool_expr->formalize(ctx_->session_info_))) {
+      } else {
+        // `not(not x)` always produces a boolean (int32), but try_create_bool_expr()
+        // returns x itself when x is already boolean-ish, e.g. `like` whose result
+        // type is int64. Replacing `not(not x)` with such a wider expr changes the
+        // result type of the enclosing expression silently, and the following
+        // formalize() would then add an implicit cast above an existing implicit
+        // cast, which is rejected by ObRawExprUtils::try_add_cast_expr_above()
+        // (issue #1477). Keep the boolean semantics by wrapping x into `x != 0`.
+        expr = bool_expr;
         is_valid = false;
         trans_happened = true;
       }
