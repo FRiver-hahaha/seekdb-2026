@@ -1,0 +1,18 @@
+#owner: simpur-dev
+# owner group: SQL1
+# tags: subquery, expression
+#description: Regression test for IFNULL with a scalar subquery first argument and a double-negated LIKE second argument (oceanbase/seekdb#1477)
+
+# Bug: type deduction tried to add an implicit cast above an expression that
+# was already an inner-added implicit cast, so the statement failed with
+# ERROR 4016 (HY000): Internal error. The expected behavior is an empty
+# result set: the scalar subquery returns non-NULL FALSE, so IFNULL evaluates
+# to FALSE and the WHERE predicate filters the row out.
+
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE "x")));
+
+# Control case: one negation instead of two; behavior must stay unchanged.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE "x"));
+
+# Control case: a literal instead of a scalar subquery; behavior must stay unchanged.
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE "x")));
