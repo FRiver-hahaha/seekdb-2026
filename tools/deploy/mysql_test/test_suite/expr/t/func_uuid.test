@@ -1,0 +1,8 @@
+#owner: seekdb
+#owner group: sql1
+
+--disable_warnings
+select length(uuid());
+select uuid() <> uuid();
+select substr(uuid(), 15, 1) = '1';
+select substr(uuid(), 20, 1) in ('8', '9', 'a', 'b');

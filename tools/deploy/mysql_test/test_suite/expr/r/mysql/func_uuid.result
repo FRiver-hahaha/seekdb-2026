@@ -1,0 +1,12 @@
+select length(uuid());
+length(uuid())
+36
+select uuid() <> uuid();
+uuid() <> uuid()
+1
+select substr(uuid(), 15, 1) = '1';
+substr(uuid(), 15, 1) = '1'
+1
+select substr(uuid(), 20, 1) in ('8', '9', 'a', 'b');
+substr(uuid(), 20, 1) in ('8', '9', 'a', 'b')
+1
