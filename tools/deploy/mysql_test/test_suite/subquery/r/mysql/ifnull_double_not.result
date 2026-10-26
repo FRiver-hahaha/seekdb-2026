@@ -1,0 +1,36 @@
+# Original reproducer: no rows and no internal error
+1
+# Controls: one NOT and no scalar subquery
+1
+1
+# A true scalar subquery keeps the row
+value
+1
+# NULL subqueries use the fallback, preserving false, true and NULL
+value
+0
+value
+1
+value
+NULL
+value
+1
+# Longer even and odd NOT chains
+1
+value
+1
+value
+1
+# Numeric operands still convert to boolean, including zero and NULL
+nonzero_value	zero_value	null_value
+1	0	NULL
+# Row-dependent LIKE and correlated scalar subqueries
+id	value
+1	0
+2	1
+3	1
+4	0
+5	NULL
+id
+2
+3
