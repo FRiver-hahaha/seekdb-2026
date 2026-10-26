@@ -2300,7 +2300,7 @@ int ObTransformSimplifyExpr::push_not(ObIArray<ObRawExpr*> &conditions, bool &tr
       ret = OB_ERR_UNEXPECTED;
     } else if (!child_expr->has_flag(CNT_NOT)) {
      //do nothing
-    } else if (OB_FAIL(recursive_push_not(child_expr, push_expr_map, trans_happened))) {
+    } else if (OB_FAIL(recursive_push_not(child_expr, push_expr_map, true, trans_happened))) {
     } else {/*do nothing*/}
   }
   if (OB_SUCC(ret) && trans_happened) {
@@ -2312,14 +2312,24 @@ int ObTransformSimplifyExpr::push_not(ObIArray<ObRawExpr*> &conditions, bool &tr
 
 int ObTransformSimplifyExpr::recursive_push_not(ObRawExpr *&expr,
                                                 hash::ObHashMap<uint64_t, ObRawExpr *> &push_expr_map,
+                                                bool used_as_condition,
                                                 bool &trans_happened)
 {
   int ret = OB_SUCCESS;
+  bool child_used_as_condition = false;
   if (OB_ISNULL(expr)) {
     ret = OB_ERR_UNEXPECTED;
   } else if (!expr->has_flag(IS_NOT)) {
     //do nothing
-  } else if (OB_FAIL(do_push_not(expr, push_expr_map, trans_happened))) {
+  } else if (OB_FAIL(do_push_not(expr, push_expr_map, used_as_condition, trans_happened))) {
+  }
+  if (OB_SUCC(ret)) {
+    // Logical operators consume truth values and keep their own result type.
+    // Inspect the replacement, which may no longer be a NOT expression.
+    const ObItemType expr_type = expr->get_expr_type();
+    child_used_as_condition = T_OP_AND == expr_type || T_OP_OR == expr_type
+                              || T_OP_NOT == expr_type || T_OP_XOR == expr_type
+                              || T_OP_BOOL == expr_type;
   }
   for (int64_t i = 0; OB_SUCC(ret) && i < expr->get_param_count(); i++) {
     ObRawExpr *&child_expr = expr->get_param_expr(i);
@@ -2327,7 +2337,10 @@ int ObTransformSimplifyExpr::recursive_push_not(ObRawExpr *&expr,
       ret = OB_ERR_UNEXPECTED;
     } else if (!child_expr->has_flag(CNT_NOT)) {
       //do nothing
-    } else if (OB_FAIL(SMART_CALL(recursive_push_not(child_expr, push_expr_map, trans_happened)))) {
+    } else if (OB_FAIL(SMART_CALL(recursive_push_not(child_expr,
+                                                   push_expr_map,
+                                                   child_used_as_condition,
+                                                   trans_happened)))) {
     } else {/*do nothing*/}
   }
   return ret;
@@ -2335,6 +2348,7 @@ int ObTransformSimplifyExpr::recursive_push_not(ObRawExpr *&expr,
 
 int ObTransformSimplifyExpr::do_push_not(ObRawExpr *&expr,
                                          hash::ObHashMap<uint64_t, ObRawExpr *> &push_expr_map,
+                                         bool used_as_condition,
                                          bool &trans_happened)
 {
   int ret = OB_SUCCESS;
@@ -2377,11 +2391,20 @@ int ObTransformSimplifyExpr::do_push_not(ObRawExpr *&expr,
     } else {
       // size of not is even
       // not(not c1 > 1)) -> c1>1
+      // In a value context, preserve NOT's result type so the parent's existing
+      // implicit casts remain valid. Conditions keep the predicate unwrapped
+      // for subsequent range extraction and other predicate transformations.
       ObRawExpr *temp = NULL;
       if (OB_FAIL(ObRawExprUtils::try_create_bool_expr(cur, temp, *expr_factory))) {
       } else if (OB_ISNULL(temp)) {
         ret = OB_ERR_UNEXPECTED;
       } else if (OB_FAIL(temp->formalize(ctx_->session_info_))) {
+      } else if (!used_as_condition &&
+                 OB_FAIL(ObRawExprUtils::try_add_cast_expr_above(expr_factory,
+                                                               ctx_->session_info_,
+                                                               *temp,
+                                                               expr->get_result_type(),
+                                                               temp))) {
       } else {
         expr = temp;
         is_valid = false;

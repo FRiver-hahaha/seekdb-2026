@@ -1,0 +1,97 @@
+CREATE DATABASE IF NOT EXISTS test;
+USE test;
+DROP TABLE IF EXISTS t_ifnull_boolean_subquery;
+# Issue 1477: removing even NOT chains must preserve the result type.
+SELECT 1 AS result FROM dual
+WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x')));
+result
+SELECT 1 AS result FROM dual
+WHERE IFNULL((SELECT FALSE), !(!(!(!(1 LIKE 'x')))));
+result
+# Controls: a single NOT and a literal first argument.
+SELECT 1 AS result FROM dual
+WHERE IFNULL((SELECT FALSE), !(1 LIKE 'x'));
+result
+SELECT 1 AS result FROM dual
+WHERE IFNULL(FALSE, !(!(1 LIKE 'x')));
+result
+# Empty scalar subqueries use the fallback, including SQL NULL.
+SELECT 1 AS result FROM dual
+WHERE IFNULL((SELECT FALSE WHERE FALSE), !(!(1 LIKE '1')));
+result
+1
+SELECT 1 AS result FROM dual
+WHERE IFNULL((SELECT FALSE WHERE FALSE), !(!(1 LIKE 'x')));
+result
+SELECT 1 AS result FROM dual
+WHERE IFNULL((SELECT FALSE WHERE FALSE), !(!(1 LIKE NULL)));
+result
+SELECT 1 AS result FROM dual
+WHERE IFNULL((SELECT TRUE), !(!(1 LIKE NULL)));
+result
+1
+# Exercise nonconstant LIKE operands with true, false and NULL values.
+CREATE TABLE t_ifnull_boolean_subquery
+(id INT PRIMARY KEY, value VARCHAR(10), KEY idx_value(value));
+INSERT INTO t_ifnull_boolean_subquery VALUES (1, 'x'), (2, 'y'), (3, NULL);
+SELECT id FROM t_ifnull_boolean_subquery
+WHERE IFNULL((SELECT FALSE), !(!(value LIKE 'x'))) ORDER BY id;
+id
+SELECT id FROM t_ifnull_boolean_subquery
+WHERE IFNULL((SELECT TRUE), !(!(value LIKE 'x'))) ORDER BY id;
+id
+1
+2
+3
+SELECT id FROM t_ifnull_boolean_subquery
+WHERE IFNULL((SELECT FALSE WHERE FALSE), !(!(value LIKE 'x'))) ORDER BY id;
+id
+1
+SELECT id FROM t_ifnull_boolean_subquery
+WHERE IFNULL((SELECT FALSE WHERE FALSE), !(!(!(!(value LIKE 'x'))))) ORDER BY id;
+id
+1
+SELECT id FROM t_ifnull_boolean_subquery
+WHERE IFNULL((SELECT FALSE WHERE FALSE), !(!(!(value LIKE 'x')))) ORDER BY id;
+id
+2
+# Logical operands and a replacement that is itself a value expression.
+SELECT id FROM t_ifnull_boolean_subquery
+WHERE IFNULL((SELECT FALSE WHERE FALSE), (!(!(value LIKE 'x')) AND id > 0)) ORDER BY id;
+id
+1
+SELECT id FROM t_ifnull_boolean_subquery
+WHERE !(!(IFNULL((SELECT FALSE), !(!(value LIKE 'x'))))) ORDER BY id;
+id
+# Predicate contexts must retain prefix LIKE index ranges.
+EXPLAIN BASIC SELECT id FROM t_ifnull_boolean_subquery FORCE INDEX(idx_value)
+WHERE !(!(value LIKE 'x%'));
+Query Plan
+==========================================================
+|ID|OPERATOR        |NAME                                |
+----------------------------------------------------------
+|0 |TABLE RANGE SCAN|t_ifnull_boolean_subquery(idx_value)|
+==========================================================
+Outputs & filters:
+-------------------------------------
+  0 - output([t_ifnull_boolean_subquery.id]), filter(nil), rowset=16
+      access([t_ifnull_boolean_subquery.id]), partitions(p0)
+      is_index_back=false, is_global_index=false,
+      range_key([t_ifnull_boolean_subquery.value], [t_ifnull_boolean_subquery.id]), range(...),
+      range_cond([(T_OP_LIKE, t_ifnull_boolean_subquery.value, 'x%', '\\')])
+EXPLAIN BASIC SELECT id FROM t_ifnull_boolean_subquery FORCE INDEX(idx_value)
+WHERE !(!(value LIKE 'x%')) AND id > 0;
+Query Plan
+==========================================================
+|ID|OPERATOR        |NAME                                |
+----------------------------------------------------------
+|0 |TABLE RANGE SCAN|t_ifnull_boolean_subquery(idx_value)|
+==========================================================
+Outputs & filters:
+-------------------------------------
+  0 - output([t_ifnull_boolean_subquery.id]), filter([t_ifnull_boolean_subquery.id > 0]), rowset=16
+      access([t_ifnull_boolean_subquery.id]), partitions(p0)
+      is_index_back=false, is_global_index=false, filter_before_indexback[false],
+      range_key([t_ifnull_boolean_subquery.value], [t_ifnull_boolean_subquery.id]), range(...),
+      range_cond([(T_OP_LIKE, t_ifnull_boolean_subquery.value, 'x%', '\\')])
+DROP TABLE t_ifnull_boolean_subquery;
