@@ -1,0 +1,15 @@
+drop table if exists t1;
+create table t1 (a int);
+insert into t1 values (1);
+insert into t1 values (2);
+select 1 from dual where ifnull((select false), !(!(1 like 'x')));
+1
+select 1 from dual where ifnull((select true), !(!(1 like 'x')));
+1
+1
+select 1 from dual where ifnull((select false), !(1 like 'x'));
+1
+select a from t1 where ifnull((select null), !(!(a like '1')));
+a
+1
+drop table t1;

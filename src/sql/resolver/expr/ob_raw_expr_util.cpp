@@ -2687,24 +2687,33 @@ int ObRawExprUtils::try_add_cast_expr_above(ObRawExprFactory *expr_factory,
   CK(OB_NOT_NULL(session) && OB_NOT_NULL(expr_factory));
   OZ(ObRawExprUtils::check_need_cast_expr(src_type, dst_type, need_cast, ignore_dup_cast_error));
   if (OB_SUCC(ret) && need_cast) {
+    // The same expression tree can be deduced more than once: a predicate that
+    // a rewrite rule changed is formalized again, for example, and this operand
+    // still carries the implicit cast added by the previous pass. Stacking a
+    // second implicit cast on top of it used to raise OB_ERR_UNEXPECTED here.
+    // Rebuild the cast from the operand below the implicit chain instead, so
+    // one cast replaces the redundant chain.
+    ObRawExpr *cast_src = &expr;
     if (T_FUN_SYS_CAST == expr.get_expr_type()
         && expr.has_flag(IS_OP_OPERAND_IMPLICIT_CAST)
         && !ignore_dup_cast_error
         && !((src_type.is_collection_sql_type()
                   && (dst_type.is_character_type() || dst_type.is_null()))
-            || (src_type.is_character_type() && dst_type.is_character_type())))
-      {
-      ret = OB_ERR_UNEXPECTED;
-#ifdef DEBUG
-      LOG_ERROR("try to add implicit cast again, check if type deduction is correct",
-                K(ret), K(expr), K(dst_type),
-                K(session->get_current_query_string()));
-#else
-      LOG_WARN("try to add implicit cast again, check if type deduction is correct",
-                K(ret), K(expr), K(dst_type), K(src_type), K(ignore_dup_cast_error),
-                K(session->get_current_query_string()));
-#endif
-    } else {
+            || (src_type.is_character_type() && dst_type.is_character_type()))) {
+      ObRawExpr *origin_expr = ObRawExprUtils::skip_implicit_cast(&expr);
+      if (OB_ISNULL(origin_expr)) {
+        ret = OB_ERR_UNEXPECTED;
+        LOG_WARN("unexpected null operand below implicit cast", K(ret), K(expr));
+      } else if (T_FUN_SYS_CAST == origin_expr->get_expr_type()) {
+        // The chain ends at a CAST the user wrote, which must keep its
+        // IS_OP_OPERAND_IMPLICIT_CAST-free meaning; report as before.
+        ret = OB_ERR_UNEXPECTED;
+        LOG_WARN("try to add implicit cast above an explicit cast", K(ret), K(expr), K(dst_type));
+      } else {
+        cast_src = origin_expr;
+      }
+    }
+    if (OB_SUCC(ret)) {
       //setup implicit cast charset convert ignore error
       ObCastMode cm_zf = cm;
       if ((cm_zf & CM_COLUMN_CONVERT) != 0) {
@@ -2722,11 +2731,12 @@ int ObRawExprUtils::try_add_cast_expr_above(ObRawExprFactory *expr_factory,
         cm_zf |= dst_type.get_cast_mode();
       }
       ObSysFunRawExpr *cast_expr = NULL;
-      OZ(ObRawExprUtils::create_cast_expr(*expr_factory, &expr, dst_type, cast_expr,
+      OZ(ObRawExprUtils::create_cast_expr(*expr_factory, cast_src, dst_type, cast_expr,
                                           session, false, cm_zf, local_vars, local_var_id));
       CK(OB_NOT_NULL(new_expr = dynamic_cast<ObRawExpr*>(cast_expr)));
     }
   }
+
   return ret;
 }
 

@@ -1,0 +1,20 @@
+# owner: seekdb-competition
+# owner group: sql1
+# tags: optimizer
+# description: IFNULL over a scalar subquery must not report an internal error
+#              when a rewrite rule formalizes an operand that already carries
+#              an implicit cast (issue #1477).
+
+--disable_warnings
+drop table if exists t1;
+--enable_warnings
+create table t1 (a int);
+insert into t1 values (1);
+insert into t1 values (2);
+
+select 1 from dual where ifnull((select false), !(!(1 like 'x')));
+select 1 from dual where ifnull((select true), !(!(1 like 'x')));
+select 1 from dual where ifnull((select false), !(1 like 'x'));
+select a from t1 where ifnull((select null), !(!(a like '1')));
+
+drop table t1;
