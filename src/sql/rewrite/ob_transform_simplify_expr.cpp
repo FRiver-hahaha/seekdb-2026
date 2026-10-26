@@ -2377,11 +2377,15 @@ int ObTransformSimplifyExpr::do_push_not(ObRawExpr *&expr,
     } else {
       // size of not is even
       // not(not c1 > 1)) -> c1>1
+      // Preserve the type already seen by the parent: LIKE can return a wider
+      // integer type than NOT, even though both expressions are boolean.
       ObRawExpr *temp = NULL;
       if (OB_FAIL(ObRawExprUtils::try_create_bool_expr(cur, temp, *expr_factory))) {
       } else if (OB_ISNULL(temp)) {
         ret = OB_ERR_UNEXPECTED;
       } else if (OB_FAIL(temp->formalize(ctx_->session_info_))) {
+      } else if (OB_FAIL(ObTransformUtils::add_cast_for_replace_if_need(
+                     *expr_factory, expr, temp, ctx_->session_info_))) {
       } else {
         expr = temp;
         is_valid = false;

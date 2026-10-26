@@ -1,0 +1,20 @@
+# Issue #1477: removing NOT pairs must preserve the parent's deduced types.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(!(!(1 LIKE 'x')))));
+SELECT 1 FROM dual WHERE IFNULL((SELECT TRUE), !(!(1 LIKE 'x')));
+
+# The two original control cases must continue to return no rows.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE 'x'));
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE 'x')));
+
+# Exercise value contexts, a non-NULL first argument and NULL fallback values.
+SELECT IFNULL((SELECT FALSE), !(!(1 LIKE 'x'))) AS value;
+SELECT IFNULL((SELECT TRUE), !(!(1 LIKE 'x'))) AS value;
+SELECT IFNULL((SELECT NULL), !(!(1 LIKE '1'))) AS value;
+SELECT IFNULL((SELECT NULL), !(!(1 LIKE 'x'))) AS value;
+SELECT IFNULL((SELECT NULL), !(!(NULL LIKE 'x'))) AS value;
+
+# Longer even chains and an odd-chain control preserve boolean semantics.
+SELECT IFNULL((SELECT FALSE), !(!(!(!(1 LIKE 'x'))))) AS value;
+SELECT IFNULL((SELECT NULL), !(!(!(!(1 LIKE '1'))))) AS value;
+SELECT IFNULL((SELECT NULL), !(!(!(1 LIKE '1')))) AS value;
