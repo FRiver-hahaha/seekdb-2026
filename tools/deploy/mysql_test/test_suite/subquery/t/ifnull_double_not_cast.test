@@ -1,0 +1,33 @@
+--disable_query_log
+set @@session.explicit_defaults_for_timestamp=off;
+--enable_query_log
+# Regression for https://github.com/oceanbase/seekdb/issues/1477
+# Removing an even NOT chain must keep the result type of the removed NOT, so that
+# re-formalizing IFNULL does not add a second implicit cast above the other operand.
+--disable_warnings
+drop table if exists t_ifnull_double_not;
+--enable_warnings
+
+# Minimal reproducer: the scalar subquery is non-NULL FALSE, so no row is returned.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE "x")));
+
+# Control cases: a single negation, and a literal instead of a scalar subquery.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE "x"));
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE "x")));
+
+# Value check on both IFNULL branches.
+SELECT IFNULL((SELECT FALSE), !(!(1 LIKE "x"))) AS value;
+SELECT IFNULL((SELECT TRUE), !(!(1 LIKE "x"))) AS value;
+SELECT IFNULL((SELECT NULL), !(!(1 LIKE "1"))) AS value;
+SELECT IFNULL((SELECT NULL), !(!(NULL LIKE "x"))) AS value;
+
+# A longer NOT chain keeps the same parity handling.
+SELECT IFNULL((SELECT FALSE), !(!(!(!(1 LIKE "x"))))) AS value;
+SELECT IFNULL((SELECT NULL), !(!(!(1 LIKE "x")))) AS value;
+
+# Double NOT above a column reference, where the operand is not a constant.
+create table t_ifnull_double_not (id int primary key, s varchar(10));
+insert into t_ifnull_double_not values (1, 'x'), (2, 'y'), (3, NULL);
+SELECT id FROM t_ifnull_double_not WHERE IFNULL((SELECT NULL), !(!(s LIKE 'x'))) ORDER BY id;
+SELECT id FROM t_ifnull_double_not WHERE IFNULL((SELECT NULL), !(s LIKE 'x')) ORDER BY id;
+drop table t_ifnull_double_not;

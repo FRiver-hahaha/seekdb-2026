@@ -1279,7 +1279,17 @@ int ObTransformSimplifyExpr::inner_remove_dummy_nvl(ObDMLStmt *stmt,
           ret = OB_ERR_UNEXPECTED;
           LOG_WARN("unexpected null bool expr", K(ret));
         } else if (OB_FAIL(new_child->formalize(ctx_->session_info_))) {
+        } else if (OB_FAIL(ObTransformUtils::add_cast_for_replace_if_need(*ctx_->expr_factory_,
+                                                                         child_0,
+                                                                         new_child,
+                                                                         ctx_->session_info_))) {
+        } else if (OB_ISNULL(new_child)) {
+          ret = OB_ERR_UNEXPECTED;
+          LOG_WARN("unexpected null bool expr", K(ret));
         } else {
+          // Same as do_push_not: the removed NOT chain decides the type of this
+          // operand, keep it so the following formalize of the IFNULL does not
+          // stack another implicit cast on top of it.
           op_expr->get_param_expr(0) = new_child;
           if (OB_FAIL(expr->formalize(ctx_->session_info_))) {
           } else {
@@ -2377,11 +2387,22 @@ int ObTransformSimplifyExpr::do_push_not(ObRawExpr *&expr,
     } else {
       // size of not is even
       // not(not c1 > 1)) -> c1>1
+      // NOT yields INT32 while the uncovered expression may keep another result
+      // type (LIKE yields BIGINT for example). The eliminated NOT's result type
+      // must be preserved, otherwise formalizing the parent again (IFNULL/NVL,
+      // where the other operand is deducing a cast at the same time) would add a
+      // second implicit cast above an already typed operand and raise -4016.
       ObRawExpr *temp = NULL;
       if (OB_FAIL(ObRawExprUtils::try_create_bool_expr(cur, temp, *expr_factory))) {
       } else if (OB_ISNULL(temp)) {
         ret = OB_ERR_UNEXPECTED;
       } else if (OB_FAIL(temp->formalize(ctx_->session_info_))) {
+      } else if (OB_FAIL(ObTransformUtils::add_cast_for_replace_if_need(*expr_factory,
+                                                                       expr,
+                                                                       temp,
+                                                                       ctx_->session_info_))) {
+      } else if (OB_ISNULL(temp)) {
+        ret = OB_ERR_UNEXPECTED;
       } else {
         expr = temp;
         is_valid = false;

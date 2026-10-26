@@ -1,0 +1,31 @@
+drop table if exists t_ifnull_double_not;
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE "x")));
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE "x"));
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE "x")));
+SELECT IFNULL((SELECT FALSE), !(!(1 LIKE "x"))) AS value;
+value
+0
+SELECT IFNULL((SELECT TRUE), !(!(1 LIKE "x"))) AS value;
+value
+1
+SELECT IFNULL((SELECT NULL), !(!(1 LIKE "1"))) AS value;
+value
+1
+SELECT IFNULL((SELECT NULL), !(!(NULL LIKE "x"))) AS value;
+value
+NULL
+SELECT IFNULL((SELECT FALSE), !(!(!(!(1 LIKE "x"))))) AS value;
+value
+0
+SELECT IFNULL((SELECT NULL), !(!(!(1 LIKE "x")))) AS value;
+value
+1
+create table t_ifnull_double_not (id int primary key, s varchar(10));
+insert into t_ifnull_double_not values (1, 'x'), (2, 'y'), (3, NULL);
+SELECT id FROM t_ifnull_double_not WHERE IFNULL((SELECT NULL), !(!(s LIKE 'x'))) ORDER BY id;
+id
+1
+SELECT id FROM t_ifnull_double_not WHERE IFNULL((SELECT NULL), !(s LIKE 'x')) ORDER BY id;
+id
+2
+drop table t_ifnull_double_not;
