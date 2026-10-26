@@ -2902,6 +2902,10 @@ int ObRawExprDeduceType::try_add_cast_expr_above_for_deduce_type(ObRawExpr &expr
 {
   int ret = OB_SUCCESS;
   ObExprResType cast_dst_type;
+  // Source expression the implicit cast is built above. It is normally the expression
+  // itself, and only moves below an existing implicit cast when that cast turns out to be
+  // stale (see the retry below).
+  ObRawExpr *cast_src = &expr;
   // cast child_res_type to cast_dst_type
   const ObExprResType &child_res_type = expr.get_result_type();
 
@@ -2974,15 +2978,33 @@ int ObRawExprDeduceType::try_add_cast_expr_above_for_deduce_type(ObRawExpr &expr
     } else if (need_wrap) {
       OZ(ObRawExprUtils::try_wrap_type_to_str(expr_factory_, my_session_, expr,
                                               cast_dst_type, new_expr));
-    } else {
-      OZ(ObRawExprUtils::try_add_cast_expr_above(expr_factory_, my_session_, expr,
-                                                 cast_dst_type, cm, new_expr,
-                                                 my_local_vars_, local_vars_id_));
+    } else if (OB_FAIL(ObRawExprUtils::try_add_cast_expr_above(expr_factory_, my_session_, expr,
+                                                               cast_dst_type, cm, new_expr,
+                                                               my_local_vars_, local_vars_id_))) {
+      // Type deduction can run more than once on the same expression tree: a rewrite may
+      // replace a child with a semantically equivalent expression of another type and then
+      // formalize the parent again. The implicit cast an earlier round added above this
+      // expression is stale in that case, because its destination no longer matches the
+      // type deduced now, and adding the new cast above it is rejected with
+      // OB_ERR_UNEXPECTED. Rebuild the cast from the cast source instead, which is the tree
+      // a fresh deduction would produce.
+      if (OB_ERR_UNEXPECTED == ret
+          && T_FUN_SYS_CAST == expr.get_expr_type()
+          && expr.has_flag(IS_OP_OPERAND_IMPLICIT_CAST)
+          && expr.get_param_count() > 0
+          && NULL != expr.get_param_expr(0)) {
+        ret = OB_SUCCESS;
+        new_expr = NULL;
+        cast_src = expr.get_param_expr(0);
+        OZ(ObRawExprUtils::try_add_cast_expr_above(expr_factory_, my_session_, *cast_src,
+                                                   cast_dst_type, cm, new_expr,
+                                                   my_local_vars_, local_vars_id_));
+      }
     }
   }
   ObRawExpr *e = new_expr;
   while (OB_SUCC(ret) && NULL != e &&
-         e != &expr && T_FUN_SYS_CAST == e->get_expr_type()) {
+         e != cast_src && T_FUN_SYS_CAST == e->get_expr_type()) {
     if (OB_FAIL(e->add_flag(IS_OP_OPERAND_IMPLICIT_CAST))) {
     } else {
       e = e->get_param_expr(0);

@@ -1,0 +1,13 @@
+# owner: seekdb-2026
+# owner group: SQL
+# tags: resolver
+# description: Regression for the duplicate implicit cast reported by IFNULL with a
+#              boolean scalar subquery and a double-negated LIKE. Type deduction runs
+#              again after the double negation has been rewritten into the plain LIKE
+#              predicate, so the cast that the first round added above the scalar
+#              subquery must be re-derived instead of being wrapped again.
+#              See https://github.com/oceanbase/seekdb/issues/1477
+
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE "x")));
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE "x"));
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE "x")));
