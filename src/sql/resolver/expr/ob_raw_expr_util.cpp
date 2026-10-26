@@ -2687,12 +2687,18 @@ int ObRawExprUtils::try_add_cast_expr_above(ObRawExprFactory *expr_factory,
   CK(OB_NOT_NULL(session) && OB_NOT_NULL(expr_factory));
   OZ(ObRawExprUtils::check_need_cast_expr(src_type, dst_type, need_cast, ignore_dup_cast_error));
   if (OB_SUCC(ret) && need_cast) {
-    if (T_FUN_SYS_CAST == expr.get_expr_type()
-        && expr.has_flag(IS_OP_OPERAND_IMPLICIT_CAST)
+    const bool is_existing_implicit_cast =
+        T_FUN_SYS_CAST == expr.get_expr_type() && expr.has_flag(IS_OP_OPERAND_IMPLICIT_CAST);
+    if (is_existing_implicit_cast
         && !ignore_dup_cast_error
         && !((src_type.is_collection_sql_type()
                   && (dst_type.is_character_type() || dst_type.is_null()))
-            || (src_type.is_character_type() && dst_type.is_character_type())))
+            || (src_type.is_character_type() && dst_type.is_character_type())
+            // The conversion between numeric types is well defined, so the type
+            // adjustment required by the re-deduction of an already deduced (or
+            // rewritten) expression is allowed, e.g.
+            //   SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x')));
+            || (src_type.is_numeric_type() && dst_type.is_numeric_type())))
       {
       ret = OB_ERR_UNEXPECTED;
 #ifdef DEBUG
@@ -2722,7 +2728,16 @@ int ObRawExprUtils::try_add_cast_expr_above(ObRawExprFactory *expr_factory,
         cm_zf |= dst_type.get_cast_mode();
       }
       ObSysFunRawExpr *cast_expr = NULL;
-      OZ(ObRawExprUtils::create_cast_expr(*expr_factory, &expr, dst_type, cast_expr,
+      // Re-casting an expression that already carries an implicit cast: add the new
+      // cast above its operand instead of above the cast itself, otherwise a
+      // redundant nested cast chain CAST(CAST(x AS t1) AS t2) would be built.
+      ObRawExpr *real_expr = &expr;
+      if (is_existing_implicit_cast &&
+          expr.get_param_count() > 0 &&
+          NULL != expr.get_param_expr(0)) {
+        real_expr = expr.get_param_expr(0);
+      }
+      OZ(ObRawExprUtils::create_cast_expr(*expr_factory, real_expr, dst_type, cast_expr,
                                           session, false, cm_zf, local_vars, local_var_id));
       CK(OB_NOT_NULL(new_expr = dynamic_cast<ObRawExpr*>(cast_expr)));
     }
