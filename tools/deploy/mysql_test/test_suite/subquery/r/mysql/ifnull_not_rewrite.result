@@ -1,0 +1,57 @@
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x')));
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE 'x'));
+1
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE 'x')));
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT TRUE), !(!(1 LIKE 'x')));
+1
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!('alpha' LIKE 'a%')));
+1
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!('alpha' LIKE 'b%')));
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(NULL LIKE 'a%')));
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(!(!('alpha' LIKE 'a%')))));
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(!(!('alpha' LIKE 'a%')))));
+1
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(!('alpha' LIKE 'b%'))));
+1
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT TRUE WHERE FALSE), !(!('alpha' LIKE 'a%')));
+1
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(2))) = 1;
+1
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(-3))) = 1;
+1
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(0))) = 0;
+1
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(NULL))) IS NULL;
+1
+1
+SELECT 1 FROM dual WHERE COALESCE((SELECT FALSE), !(!('alpha' LIKE 'a%')));
+1
+SELECT 1 FROM dual WHERE TRUE AND IFNULL((SELECT FALSE), !(!('alpha' LIKE 'a%')));
+1
+SELECT 1 FROM dual WHERE FALSE OR IFNULL((SELECT NULL), !(!('alpha' LIKE 'a%')));
+1
+1
+CREATE TABLE not_rewrite_rows (id INT PRIMARY KEY, txt VARCHAR(20), KEY idx_txt(txt));
+INSERT INTO not_rewrite_rows VALUES (1, 'alpha'), (2, 'beta'), (3, NULL);
+SELECT id FROM not_rewrite_rows t
+WHERE IFNULL((SELECT CASE WHEN t.id = 2 THEN FALSE ELSE NULL END), !(!(t.txt LIKE 'a%')))
+ORDER BY id;
+id
+1
+|0 |TABLE RANGE SCAN|not_rewrite_rows(idx_txt)|
+|0 |TABLE RANGE SCAN|not_rewrite_rows(idx_txt)|
+|0 |TABLE RANGE SCAN|not_rewrite_rows(idx_txt)|
+DROP TABLE not_rewrite_rows;

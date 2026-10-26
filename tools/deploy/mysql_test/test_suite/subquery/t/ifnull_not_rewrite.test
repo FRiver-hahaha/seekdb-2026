@@ -1,0 +1,35 @@
+# Regression for #1477: NOT simplification must preserve value operand types.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x')));
+# Both controls from the issue must keep returning an empty result.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE 'x'));
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE 'x')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT TRUE), !(!(1 LIKE 'x')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!('alpha' LIKE 'a%')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!('alpha' LIKE 'b%')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(NULL LIKE 'a%')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(!(!('alpha' LIKE 'a%')))));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(!(!('alpha' LIKE 'a%')))));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(!('alpha' LIKE 'b%'))));
+SELECT 1 FROM dual WHERE IFNULL((SELECT TRUE WHERE FALSE), !(!('alpha' LIKE 'a%')));
+# Non-boolean operands must still be converted to a truth value.
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(2))) = 1;
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(-3))) = 1;
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(0))) = 0;
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(NULL))) IS NULL;
+SELECT 1 FROM dual WHERE COALESCE((SELECT FALSE), !(!('alpha' LIKE 'a%')));
+# Exercise value parents inside boolean AND/OR predicates.
+SELECT 1 FROM dual WHERE TRUE AND IFNULL((SELECT FALSE), !(!('alpha' LIKE 'a%')));
+SELECT 1 FROM dual WHERE FALSE OR IFNULL((SELECT NULL), !(!('alpha' LIKE 'a%')));
+CREATE TABLE not_rewrite_rows (id INT PRIMARY KEY, txt VARCHAR(20), KEY idx_txt(txt));
+INSERT INTO not_rewrite_rows VALUES (1, 'alpha'), (2, 'beta'), (3, NULL);
+SELECT id FROM not_rewrite_rows t
+WHERE IFNULL((SELECT CASE WHEN t.id = 2 THEN FALSE ELSE NULL END), !(!(t.txt LIKE 'a%')))
+ORDER BY id;
+# Predicate-only replacements should remain visible to index range extraction.
+let $operator = query_get_value(EXPLAIN BASIC SELECT id FROM not_rewrite_rows FORCE INDEX(idx_txt) WHERE !(!(txt LIKE 'a%')), Query Plan, 4);
+--echo $operator
+let $operator = query_get_value(EXPLAIN BASIC SELECT id FROM not_rewrite_rows FORCE INDEX(idx_txt) WHERE !(!(txt LIKE 'a%')) AND id > 0, Query Plan, 4);
+--echo $operator
+let $operator = query_get_value(EXPLAIN BASIC SELECT id FROM not_rewrite_rows FORCE INDEX(idx_txt) WHERE !(!(txt LIKE 'a%')) OR txt = 'beta', Query Plan, 4);
+--echo $operator
+DROP TABLE not_rewrite_rows;

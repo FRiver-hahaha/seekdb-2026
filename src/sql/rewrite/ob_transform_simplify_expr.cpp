@@ -2323,11 +2323,23 @@ int ObTransformSimplifyExpr::recursive_push_not(ObRawExpr *&expr,
   }
   for (int64_t i = 0; OB_SUCC(ret) && i < expr->get_param_count(); i++) {
     ObRawExpr *&child_expr = expr->get_param_expr(i);
+    ObRawExpr *original_child = child_expr;
+    const ObItemType parent_type = expr->get_expr_type();
+    const bool boolean_operand = T_OP_AND == parent_type || T_OP_OR == parent_type ||
+                                 T_OP_XOR == parent_type || T_OP_NOT == parent_type ||
+                                 T_OP_BOOL == parent_type;
     if (OB_ISNULL(child_expr)) {
       ret = OB_ERR_UNEXPECTED;
     } else if (!child_expr->has_flag(CNT_NOT)) {
       //do nothing
     } else if (OB_FAIL(SMART_CALL(recursive_push_not(child_expr, push_expr_map, trans_happened)))) {
+    } else if (!boolean_operand && original_child != child_expr) {
+      // Value parents may already have implicit casts based on the original type.
+      // Boolean operands only need the truth value; leave their predicates exposed.
+      if (OB_FAIL(ObTransformUtils::add_cast_for_replace_if_need(
+                      *ctx_->expr_factory_, original_child, child_expr, ctx_->session_info_))) {
+        LOG_WARN("failed to preserve operand type after pushing NOT", K(ret));
+      }
     } else {/*do nothing*/}
   }
   return ret;
