@@ -16,9 +16,8 @@
 
 #define USING_LOG_PREFIX BOOTSTRAP
 
-#if defined(__EMSCRIPTEN__)
 #include "common/ob_timeout_ctx.h"
-#endif
+#include "share/ob_share_util.h"
 #include "lib/stat/ob_diagnostic_info_guard.h"
 #include "rootserver/ob_bootstrap.h"
 #include "rootserver/ob_runtime_ddl_service.h"
@@ -671,9 +670,14 @@ int ObBootstrap::init_global_stat()
 {
   int ret = OB_SUCCESS;
   ObMySQLProxy &sql_proxy = ddl_service_.get_sql_proxy();
+  ObTimeoutCtx timeout_ctx;
   ObMySQLTransaction trans;
   if (OB_FAIL(check_inner_stat())) {
+  } else if (OB_FAIL(ObShareUtil::set_default_timeout_ctx(
+                 timeout_ctx, config::internal_sql_execute_timeout()))) {
   } else {
+    // Keep the read-modify-write and commit within one internal SQL budget.
+    // Nested global-stat operations must not fall back to the RPC timeout.
     const int64_t baseline_schema_version = OB_INVALID_VERSION; // OB_INVALID_VERSION == -1
     const SCN snapshot_gc_scn = SCN::min_scn();
     const int64_t snapshot_gc_timestamp = 0;
