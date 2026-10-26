@@ -1,0 +1,24 @@
+--disable_query_log
+set @@session.explicit_defaults_for_timestamp=off;
+--enable_query_log
+# tags: optimizer
+#bug
+#description: IFNULL with a boolean scalar subquery and a double-negated LIKE predicate used to fail with ERROR 4016 Internal error during SQL rewrite type deduction (issue #1477)
+
+##
+## The statement below used to fail with ERROR 4016 (HY000) Internal error:
+## type deduction visited the condition again after the scalar subquery in
+## the WHERE clause was rewritten and tried to add an implicit cast above an
+## expression that was already an inner-added cast.
+##
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE "x")));
+
+##
+## Control: one negation instead of two.
+##
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE "x"));
+
+##
+## Control: a literal instead of a scalar subquery.
+##
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE "x")));

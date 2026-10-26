@@ -2694,17 +2694,19 @@ int ObRawExprUtils::try_add_cast_expr_above(ObRawExprFactory *expr_factory,
                   && (dst_type.is_character_type() || dst_type.is_null()))
             || (src_type.is_character_type() && dst_type.is_character_type())))
       {
-      ret = OB_ERR_UNEXPECTED;
-#ifdef DEBUG
-      LOG_ERROR("try to add implicit cast again, check if type deduction is correct",
-                K(ret), K(expr), K(dst_type),
-                K(session->get_current_query_string()));
-#else
-      LOG_WARN("try to add implicit cast again, check if type deduction is correct",
-                K(ret), K(expr), K(dst_type), K(src_type), K(ignore_dup_cast_error),
-                K(session->get_current_query_string()));
-#endif
-    } else {
+      // Type deduction may visit an expression tree more than once, e.g. when
+      // a WHERE condition that contains a scalar subquery is rewritten and
+      // re-deduced after an earlier pass has already aligned the params with
+      // implicit casts. In that case the deduced type can differ from the
+      // destination type of the existing implicit cast. Stacking the new cast
+      // above the existing one is equivalent to casting the original
+      // expression, so keep only a warning for diagnosis instead of failing
+      // the statement.
+      LOG_WARN("try to add implicit cast again, stack the new cast above the existing one",
+               K(expr), K(dst_type), K(src_type), K(ignore_dup_cast_error),
+               K(session->get_current_query_string()));
+    }
+    {
       //setup implicit cast charset convert ignore error
       ObCastMode cm_zf = cm;
       if ((cm_zf & CM_COLUMN_CONVERT) != 0) {
