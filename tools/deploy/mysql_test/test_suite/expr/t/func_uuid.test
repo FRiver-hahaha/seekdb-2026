@@ -1,0 +1,29 @@
+--disable_query_log
+set @@session.explicit_defaults_for_timestamp=off;
+--enable_query_log
+#### description: UUID() keeps returning valid UUIDv1 values after MAC
+#### description: discovery became best-effort with a random node fallback
+#### issue: https://github.com/oceanbase/seekdb/issues/1480
+--echo ================ func uuid ================
+# The node id init must not depend on a usable MAC address: on hosts where
+# interface discovery fails, a random synthetic node (multicast bit set) is
+# used, and UUID() still emits well-formed UUIDv1 values.
+select is_uuid(uuid());
+select length(uuid());
+select uuid() regexp '^[0-9a-f]{8}-[0-9a-f]{4}-1[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$';
+select is_uuid(bin_to_uuid(uuid_to_bin(uuid())));
+select is_uuid(bin_to_uuid(uuid_to_bin(uuid(), 1), 1));
+select is_uuid(@@server_uuid);
+--disable_warnings
+drop table if exists func_uuid_test;
+--enable_warnings
+create table func_uuid_test (id int primary key);
+insert into func_uuid_test values (0),(1),(2),(3),(4),(5),(6),(7),(8),(9);
+insert into func_uuid_test select id + 10 from func_uuid_test;
+insert into func_uuid_test select id + 20 from func_uuid_test;
+insert into func_uuid_test select id + 40 from func_uuid_test;
+select count(*) from func_uuid_test;
+select count(distinct uuid()) from func_uuid_test;
+--disable_warnings
+drop table if exists func_uuid_test;
+--enable_warnings

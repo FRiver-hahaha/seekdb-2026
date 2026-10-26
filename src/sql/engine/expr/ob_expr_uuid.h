@@ -38,6 +38,9 @@ struct ObUUIDNode
 {
   ObUUIDNode();
   int init();
+  // Generate a random synthetic node id (RFC 9562 6.10) for platforms where
+  // MAC discovery is unavailable or fails, e.g. restricted sandboxes.
+  static int generate_random_node(unsigned char *node);
   unsigned char mac_addr_[6];
   bool is_inited_;
 };
