@@ -1,0 +1,105 @@
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE "x")));
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE "x"));
+1
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE "x")));
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT TRUE), !(!(1 LIKE "x")));
+1
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!('x' LIKE 'x')));
+1
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!('y' LIKE 'x')));
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(NULL LIKE 'x')));
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(!(!(1 LIKE "x")))));
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(-2)));
+1
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(0)));
+1
+CREATE TABLE t_ifnull_double_not (id INT PRIMARY KEY, val VARCHAR(8), KEY idx_val(val));
+INSERT INTO t_ifnull_double_not VALUES (1, 'x'), (2, 'y'), (3, NULL);
+SELECT id FROM t_ifnull_double_not
+WHERE IFNULL((SELECT NULL), !(!(val LIKE 'x'))) ORDER BY id;
+id
+1
+SELECT id FROM t_ifnull_double_not
+WHERE IFNULL((SELECT FALSE), !(!(val LIKE 'x'))) ORDER BY id;
+id
+SELECT id FROM t_ifnull_double_not
+WHERE IFNULL((SELECT NULL), !(!(!(!(val LIKE 'x'))))) ORDER BY id;
+id
+1
+SELECT id FROM t_ifnull_double_not
+WHERE IFNULL((SELECT NULL), IFNULL((SELECT NULL), !(!(val LIKE 'x')))) ORDER BY id;
+id
+1
+SELECT id FROM t_ifnull_double_not
+WHERE IFNULL((SELECT NULL), !(!(val IS NULL))) ORDER BY id;
+id
+3
+SELECT id FROM t_ifnull_double_not
+WHERE IFNULL((SELECT NULL), !(!(val LIKE 'x'))) IS NULL ORDER BY id;
+id
+3
+SELECT id FROM t_ifnull_double_not WHERE !(!(val LIKE 'x%')) ORDER BY id;
+id
+1
+SELECT id FROM t_ifnull_double_not WHERE !(!(val LIKE 'x%')) AND id > 0 ORDER BY id;
+id
+1
+SELECT id FROM t_ifnull_double_not WHERE !(!(val LIKE 'x%')) OR val LIKE 'y%' ORDER BY id;
+id
+1
+2
+EXPLAIN BASIC SELECT /*+ INDEX(t_ifnull_double_not idx_val) */ id FROM t_ifnull_double_not
+WHERE !(!(val LIKE 'x%'));
+Query Plan
+==================================================
+|ID|OPERATOR        |NAME                        |
+--------------------------------------------------
+|0 |TABLE RANGE SCAN|t_ifnull_double_not(idx_val)|
+==================================================
+Outputs & filters:
+-------------------------------------
+  0 - output([t_ifnull_double_not.id]), filter(nil), rowset=16
+      access([t_ifnull_double_not.id]), partitions(p0)
+      is_index_back=false, is_global_index=false, 
+      range_key([t_ifnull_double_not.val], [t_ifnull_double_not.id]), range(x,MIN ; x￿￿￿￿￿￿￿￿￿￿ ,MAX), 
+      range_cond([(T_OP_LIKE, t_ifnull_double_not.val, 'x%', '\\')])
+EXPLAIN BASIC SELECT /*+ INDEX(t_ifnull_double_not idx_val) */ id FROM t_ifnull_double_not
+WHERE !(!(val LIKE 'x%')) AND id > 0;
+Query Plan
+==================================================
+|ID|OPERATOR        |NAME                        |
+--------------------------------------------------
+|0 |TABLE RANGE SCAN|t_ifnull_double_not(idx_val)|
+==================================================
+Outputs & filters:
+-------------------------------------
+  0 - output([t_ifnull_double_not.id]), filter([t_ifnull_double_not.id > 0]), rowset=16
+      access([t_ifnull_double_not.id]), partitions(p0)
+      is_index_back=false, is_global_index=false, filter_before_indexback[false], 
+      range_key([t_ifnull_double_not.val], [t_ifnull_double_not.id]), range(x,0 ; x￿￿￿￿￿￿￿￿￿￿ ,MAX), 
+      range_cond([(T_OP_LIKE, t_ifnull_double_not.val, 'x%', '\\')])
+EXPLAIN BASIC SELECT /*+ INDEX(t_ifnull_double_not idx_val) */ id FROM t_ifnull_double_not
+WHERE !(!(val LIKE 'x%')) OR val LIKE 'y%';
+Query Plan
+==================================================
+|ID|OPERATOR        |NAME                        |
+--------------------------------------------------
+|0 |TABLE RANGE SCAN|t_ifnull_double_not(idx_val)|
+==================================================
+Outputs & filters:
+-------------------------------------
+  0 - output([t_ifnull_double_not.id]), filter(nil), rowset=16
+      access([t_ifnull_double_not.id]), partitions(p0)
+      is_index_back=false, is_global_index=false, 
+      range_key([t_ifnull_double_not.val], [t_ifnull_double_not.id]), range(x,MIN ; x￿￿￿￿￿￿￿￿￿￿ ,MAX), (y,MIN ; y￿￿￿￿￿￿￿￿￿￿ 
+      ,MAX), 
+      range_cond([(T_OP_LIKE, t_ifnull_double_not.val, 'x%', '\\') OR (T_OP_LIKE, t_ifnull_double_not.val, 'y%', '\\')])
+DROP TABLE t_ifnull_double_not;
