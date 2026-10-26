@@ -1279,7 +1279,18 @@ int ObTransformSimplifyExpr::inner_remove_dummy_nvl(ObDMLStmt *stmt,
           ret = OB_ERR_UNEXPECTED;
           LOG_WARN("unexpected null bool expr", K(ret));
         } else if (OB_FAIL(new_child->formalize(ctx_->session_info_))) {
+        } else if (OB_FAIL(ObTransformUtils::add_cast_for_replace_if_need(
+                              *ctx_->expr_factory_, child_0, new_child,
+                              ctx_->session_info_))) {
+        } else if (OB_ISNULL(new_child)) {
+          ret = OB_ERR_UNEXPECTED;
+          LOG_WARN("unexpected null bool expr", K(ret));
         } else {
+          // Removing an even number of NOTs does not change the truth value,
+          // but the replacement may have a different result type. Keep the
+          // type of the expression being replaced so that re-formalizing the
+          // parent NVL/IFNULL does not add an implicit cast above an existing
+          // one.
           op_expr->get_param_expr(0) = new_child;
           if (OB_FAIL(expr->formalize(ctx_->session_info_))) {
           } else {
@@ -2382,7 +2393,16 @@ int ObTransformSimplifyExpr::do_push_not(ObRawExpr *&expr,
       } else if (OB_ISNULL(temp)) {
         ret = OB_ERR_UNEXPECTED;
       } else if (OB_FAIL(temp->formalize(ctx_->session_info_))) {
+      } else if (OB_FAIL(ObTransformUtils::add_cast_for_replace_if_need(
+                            *expr_factory, expr, temp, ctx_->session_info_))) {
+      } else if (OB_ISNULL(temp)) {
+        ret = OB_ERR_UNEXPECTED;
       } else {
+        // The replacement has the same truth value but may have a different
+        // result type (for example, LIKE returns a wider integer than NOT).
+        // Preserve the type of the NOT expression being replaced, otherwise
+        // re-formalizing an already deduced parent expression can request an
+        // implicit cast above an existing implicit cast and fail with -4016.
         expr = temp;
         is_valid = false;
         trans_happened = true;

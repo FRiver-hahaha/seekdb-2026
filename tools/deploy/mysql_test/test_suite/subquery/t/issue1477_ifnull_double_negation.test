@@ -1,0 +1,31 @@
+# owner: GaryNasser
+# owner group: sql
+# tags: rewrite
+# description: Regression test for issue #1477. Removing an even number of
+# NOT operators from an IFNULL argument must preserve the result type of the
+# expression being replaced. Otherwise re-formalizing IFNULL tries to add an
+# implicit cast above an existing implicit cast and aborts with -4016.
+
+# The predicate below used to fail with ERROR 4016 during SQL rewrite. The
+# scalar subquery returns non-NULL FALSE, so IFNULL evaluates to false and the
+# query returns an empty result set.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x')));
+
+# Control cases: a single negation and a literal instead of a scalar subquery.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE 'x'));
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE 'x')));
+
+# The rewritten expression must keep returning the same values.
+SELECT IFNULL((SELECT FALSE), !(!(1 LIKE 'x'))) AS value;
+SELECT IFNULL((SELECT TRUE), !(!(1 LIKE 'x'))) AS value;
+SELECT IFNULL((SELECT NULL), !(!(1 LIKE 'x'))) AS value;
+SELECT IFNULL((SELECT NULL), !(!(1 LIKE '1'))) AS value;
+
+# Four NOTs, and a column instead of a constant, take the same rewrite path.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(!(!(1 LIKE 'x')))));
+DROP TABLE IF EXISTS t_issue1477;
+CREATE TABLE t_issue1477 (n INT, s VARCHAR(10));
+INSERT INTO t_issue1477 VALUES (0, 'x'), (1, 'y'), (NULL, 'x'), (NULL, NULL);
+SELECT n FROM t_issue1477 WHERE IFNULL(n, !(!(s LIKE 'x'))) ORDER BY n;
+SELECT IFNULL(n, !(!(s LIKE 'x'))) AS value FROM t_issue1477 ORDER BY n, s;
+DROP TABLE t_issue1477;
