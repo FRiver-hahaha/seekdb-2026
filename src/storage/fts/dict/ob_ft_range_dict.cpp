@@ -378,19 +378,29 @@ int ObFTRangeDict::match_with_hit(const ObString &single_word,
   return last_hit.dict_->match_with_hit(single_word, last_hit, hit);
 }
 
+// The range dict is only ever built with a binary collation, and the words it is
+// probed with are single characters, so comparing two words of the same length is
+// a plain byte comparison. The general charset path is kept for the other cases,
+// where the padding rule of the collation may matter.
+static int compare_range_word(const ObString &left, const ObString &right)
+{
+  int cmp = 0;
+  if (left.length() == right.length()) {
+    const int raw = (0 == left.length()) ? 0 : memcmp(left.ptr(), right.ptr(), left.length());
+    cmp = raw > 0 ? 1 : (raw < 0 ? -1 : 0);
+  } else {
+    cmp = ObCharset::strcmp(ObCollationType::CS_TYPE_UTF8MB4_BIN, left, right);
+  }
+  return cmp;
+}
+
 int ObFTRangeDict::find_first_char_range(const ObString &single_word, ObIFTDict *&dict) const
 {
   int ret = OB_SUCCESS;
   bool found = false;
   for (int i = 0; OB_SUCC(ret) && !found && i < range_dicts_.size(); ++i) {
-    if (ObCharset::strcmp(ObCollationType::CS_TYPE_UTF8MB4_BIN,
-                          range_dicts_[i].start_.get_word(),
-                          single_word)
-            <= 0
-        && ObCharset::strcmp(ObCollationType::CS_TYPE_UTF8MB4_BIN,
-                             range_dicts_[i].end_.get_word(),
-                             single_word)
-               >= 0) {
+    if (compare_range_word(range_dicts_[i].start_.get_word(), single_word) <= 0
+        && compare_range_word(range_dicts_[i].end_.get_word(), single_word) >= 0) {
       dict = range_dicts_[i].dict_;
       found = true;
     }

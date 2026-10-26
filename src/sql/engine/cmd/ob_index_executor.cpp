@@ -75,7 +75,9 @@ int ObCreateIndexExecutor::execute(ObExecContext &ctx, ObCreateIndexStmt &stmt)
   } else {
     create_index_arg.is_inner_ = my_session->is_inner();
     create_index_arg.parallelism_ = stmt.get_parallelism();
-    if (OB_FAIL(index_arg_list.push_back(&create_index_arg))) {
+    if (OB_FAIL(stmt.get_parallelism_explicit(my_session,
+                create_index_arg.is_parallelism_explicit_))) {
+    } else if (OB_FAIL(index_arg_list.push_back(&create_index_arg))) {
     }
   }
   if (OB_FAIL(ret)) {

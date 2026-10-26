@@ -25,6 +25,7 @@ namespace oceanbase
 {
 namespace sql
 {
+class ObBasicSessionInfo;
 class ObDDLStmt : public ObStmt, public ObICmd
 {
   const static int OB_DEFAULT_ARRAY_SIZE = 16;
@@ -54,6 +55,11 @@ public:
   int64_t &get_parallelism() { return parallelism_; }
   void set_has_parallel_hint(bool has_parallel_hint) { has_parallel_hint_ = has_parallel_hint; }
   bool get_has_parallel_hint() const { return has_parallel_hint_; }
+  // Whether the degree of parallelism of this statement was asked for (a PARALLEL
+  // hint, or parallel DDL turned off for the session) rather than left at the
+  // default. The executors copy it into the DDL argument, because the decision
+  // that consumes it is taken in the root server, where there is no session.
+  int get_parallelism_explicit(const ObBasicSessionInfo *session_info, bool &is_explicit) const;
 protected:
   ObArenaAllocator allocator_;
 private:

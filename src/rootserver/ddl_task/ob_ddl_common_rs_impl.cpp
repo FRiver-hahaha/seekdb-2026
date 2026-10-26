@@ -180,6 +180,11 @@ int ObDDLTaskUtil::construct_domain_index_arg(ObSchemaGetterGuard &schema_guard,
   create_index_arg.index_option_.reset();
   create_index_arg.is_offline_rebuild_ = true;
   create_index_arg.parallelism_ = task.get_parallelism();
+  // A rebuild started by a redefinition task has no statement to ask: the task
+  // it copies the index from does not know whether the user asked for a degree
+  // of parallelism, so the derived degree is kept as it is instead of taking
+  // the computed default that a statement nobody gave a parallelism to gets.
+  create_index_arg.is_parallelism_explicit_ = true;
   if (OB_FAIL(ret)) {
   } else if (index_schema->is_vec_index_snapshot_data_type()) {
     ObString domain_index_name;

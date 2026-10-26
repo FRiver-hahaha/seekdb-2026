@@ -18,6 +18,7 @@
 
 #include "sql/resolver/ddl/ob_ddl_stmt.h"
 #include "sql/ob_sql_context.h"
+#include "sql/session/ob_basic_session_info.h"
 
 namespace oceanbase
 {
@@ -40,6 +41,26 @@ int ObDDLStmt::get_first_stmt(ObString &first_stmt)
                                                 ObCharset::REPLACE_UNKNOWN_CHARACTER_ON_SAME_CHARSET))) {
   }
 
+  return ret;
+}
+
+int ObDDLStmt::get_parallelism_explicit(const ObBasicSessionInfo *session_info, bool &is_explicit) const
+{
+  int ret = OB_SUCCESS;
+  bool enable_parallel_ddl = true;
+  if (OB_ISNULL(session_info)) {
+    ret = OB_INVALID_ARGUMENT;
+  } else if (OB_FAIL(session_info->get_enable_parallel_ddl(enable_parallel_ddl))) {
+    // A statement whose parallelism can not be traced back to the session keeps
+    // the historical behaviour: treat it as asked for, so nothing widens it.
+    // The DDL must not fail over this: the flag only decides a degree of
+    // parallelism, and the value it is set to here is the conservative one.
+    LOG_WARN("get enable parallel ddl failed, treat the parallelism as explicit", K(ret));
+    is_explicit = true;
+    ret = OB_SUCCESS;
+  } else {
+    is_explicit = has_parallel_hint_ || !enable_parallel_ddl;
+  }
   return ret;
 }
 }

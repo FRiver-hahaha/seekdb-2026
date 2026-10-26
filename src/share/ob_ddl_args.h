@@ -34,7 +34,8 @@ public:
       based_schema_object_infos_(),
       parallelism_(0),
       task_id_(0),
-      is_parallel_(false)
+      is_parallel_(false),
+      is_parallelism_explicit_(false)
    { }
   virtual ~ObDDLArg() = default;
   bool is_need_check_based_schema_objects() const
@@ -59,6 +60,7 @@ public:
     parallelism_ = 0;
     task_id_ = 0;
     is_parallel_ = false;
+    is_parallelism_explicit_ = false;
   }
   DECLARE_TO_STRING;
 
@@ -69,6 +71,12 @@ public:
   int64_t task_id_;
   //some parallel ddl is effect before 4220, this member is valid after 4220
   bool is_parallel_;
+  // Whether parallelism_ was asked for (a PARALLEL hint, or parallel DDL turned
+  // off in the session) rather than left at the default. Everything that derives
+  // its own degree of parallelism from parallelism_ -- the auxiliary index tables
+  // of a fulltext index, for one -- keeps the value when this is set, and is free
+  // to replace the default when it is not.
+  bool is_parallelism_explicit_;
 };
 
 } // namespace obcall

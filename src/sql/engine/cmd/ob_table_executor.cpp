@@ -1423,6 +1423,8 @@ int ObAlterTableExecutor::set_index_arg_list(ObExecContext &ctx, ObAlterTableStm
       } else {
         create_index_arg.is_inner_ = my_session->is_inner();
         if (OB_FAIL(create_index_arg.assign(index_stmt.get_create_index_arg()))) {
+        } else if (OB_FAIL(stmt.get_parallelism_explicit(my_session,
+                                                         create_index_arg.is_parallelism_explicit_))) {
         } else if (OB_FAIL(alter_table_arg.index_arg_list_.push_back(&create_index_arg))) {
         }
       }

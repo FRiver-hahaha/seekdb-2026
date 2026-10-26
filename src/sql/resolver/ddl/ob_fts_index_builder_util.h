@@ -158,6 +158,7 @@ public:
   static int decide_parallelism(
         const share::schema::ObIndexType index_type,
         const int64_t original_parallelism,
+        const bool is_parallelism_explicit,
         int64_t &decided_parallelism);
 private:
   static int build_fts_aux_index_name(
