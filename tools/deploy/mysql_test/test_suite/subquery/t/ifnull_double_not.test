@@ -1,0 +1,15 @@
+# Regression for #1477: eliminating NOT pairs must preserve the result type.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE 'x'));
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE 'x')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT TRUE), !(!(1 LIKE 'x')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(1 LIKE 'x')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(1 LIKE '1')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(!(!(1 LIKE 'x')))));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(!(1 LIKE 'x'))));
+SELECT IFNULL((SELECT NULL), !(!(1 LIKE '1'))) AS value;
+SELECT IFNULL((SELECT NULL), !(!(NULL LIKE 'x'))) AS value;
+SELECT IFNULL((SELECT NULL), !(!(2))) AS value;
+SELECT IFNULL((SELECT NULL), !(!(-2))) AS value;
+SELECT IFNULL((SELECT NULL), !(!(0))) AS value;
+SELECT IFNULL((SELECT NULL), !(!(NULL))) AS value;
