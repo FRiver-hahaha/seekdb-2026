@@ -1,0 +1,31 @@
+# owner group: SQL1
+# tags: optimizer
+# description: oceanbase/seekdb issue 1477, duplicate implicit cast after simplifying an even NOT chain
+
+--disable_query_log
+set @@session.explicit_defaults_for_timestamp=off;
+--enable_query_log
+
+--disable_warnings
+drop database if exists issue1477;
+--enable_warnings
+create database issue1477;
+use issue1477;
+
+# Minimal reproduction: the even NOT chain is simplified to LIKE while the
+# enclosing IFNULL is re-formalized, which used to add a second implicit cast
+# and fail with error 4016.
+select 1 from dual where ifnull((select false), !(!(1 like 'x')));
+
+# The simplification keeps the original result type and semantics.
+select !(!(1 like 'x')) as c1;
+select !(!(1 like '1')) as c2;
+select ifnull((select false), !(!(1 like 'x'))) as c3;
+
+# Control 1: a single NOT is not simplified, so no cast was added before.
+select 1 from dual where ifnull((select false), !(1 like 'x'));
+
+# Control 2: the constant IFNULL argument is removed before re-formalization.
+select 1 from dual where ifnull(false, !(!(1 like 'x')));
+
+drop database issue1477;

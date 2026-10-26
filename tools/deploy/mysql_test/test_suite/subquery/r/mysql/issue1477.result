@@ -1,0 +1,19 @@
+drop database if exists issue1477;
+create database issue1477;
+use issue1477;
+select 1 from dual where ifnull((select false), !(!(1 like 'x')));
+1
+select !(!(1 like 'x')) as c1;
+c1
+0
+select !(!(1 like '1')) as c2;
+c2
+1
+select ifnull((select false), !(!(1 like 'x'))) as c3;
+c3
+0
+select 1 from dual where ifnull((select false), !(1 like 'x'));
+1
+select 1 from dual where ifnull(false, !(!(1 like 'x')));
+1
+drop database issue1477;
