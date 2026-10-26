@@ -2381,6 +2381,26 @@ int ObTransformSimplifyExpr::do_push_not(ObRawExpr *&expr,
       if (OB_FAIL(ObRawExprUtils::try_create_bool_expr(cur, temp, *expr_factory))) {
       } else if (OB_ISNULL(temp)) {
         ret = OB_ERR_UNEXPECTED;
+      } else if (temp == cur &&
+                 cur->get_result_type().get_type() != expr->get_result_type().get_type()) {
+        // The removed NOT chain returns int32, while the inner expression may
+        // return another type (for example, LIKE returns int64). Replacing the
+        // NOT chain with such an expression changes the result type of the
+        // condition. A parent that was already deduced may then request a new
+        // implicit cast above the implicit cast added by the previous deduction,
+        // which is rejected as an unexpected error (issue #1477). Wrap the
+        // expression with T_OP_BOOL to keep the type of the removed NOT chain.
+        ObOpRawExpr *bool_expr = NULL;
+        if (OB_FAIL(expr_factory->create_raw_expr(T_OP_BOOL, bool_expr))) {
+        } else if (OB_ISNULL(bool_expr)) {
+          ret = OB_ERR_UNEXPECTED;
+        } else if (OB_FAIL(bool_expr->add_flag(IS_INNER_ADDED_EXPR))) {
+        } else if (OB_FAIL(bool_expr->set_param_expr(cur))) {
+        } else {
+          temp = bool_expr;
+        }
+      }
+      if (OB_FAIL(ret)) {
       } else if (OB_FAIL(temp->formalize(ctx_->session_info_))) {
       } else {
         expr = temp;

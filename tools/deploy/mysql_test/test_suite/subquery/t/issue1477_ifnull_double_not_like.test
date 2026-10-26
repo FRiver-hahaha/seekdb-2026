@@ -1,0 +1,30 @@
+#owner: suncuau
+# owner group: SQL1
+# tags: subquery,optimizer
+#description: Regression test for issue #1477. A boolean scalar subquery in
+# IFNULL together with a double negated LIKE used to fail during type
+# deduction with "ERROR 4016 (HY000): Internal error".
+
+# The optimizer simplifies !(!(1 LIKE "x")) to the LIKE expression. LIKE
+# returns int64, while the NOT chain it replaces returns int32, so the
+# already deduced IFNULL was deduced again and asked for a second implicit
+# cast on top of the implicit cast added by the first deduction. Adding the
+# duplicate implicit cast is rejected, which raised the internal error.
+# The rewrite now keeps the result type of the removed NOT chain, so the
+# parent expression is stable and no duplicate cast is required.
+
+# Repro from the issue.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE "x")));
+
+# Same failing type deduction, but a non-null first argument makes the
+# condition true, so the query returns one row.
+SELECT 1 FROM dual WHERE IFNULL((SELECT TRUE), !(!(1 LIKE "x")));
+
+# A single negation is not rewritten by the double negation rule.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE "x"));
+
+# A constant first argument is not affected either.
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE "x")));
+
+# The double negated LIKE itself must keep its boolean value.
+SELECT 1 FROM dual WHERE !(!("abc" LIKE "abc"));
