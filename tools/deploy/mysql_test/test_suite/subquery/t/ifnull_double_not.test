@@ -1,0 +1,41 @@
+# Regression for #1477: an even NOT chain must retain its result type.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE "x")));
+
+# Controls from the issue.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE "x"));
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE "x")));
+
+# Exercise both the non-NULL first argument and the fallback branch.
+SELECT 1 FROM dual WHERE IFNULL((SELECT TRUE), !(!(1 LIKE "x")));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(1 LIKE "1")));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(1 LIKE "x")));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(NULL LIKE "x")));
+
+# Longer even chains and the odd-chain control.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(!(!(1 LIKE "x")))));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(!(!(1 LIKE "1")))));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(!(1 LIKE "x"))));
+
+# Nonconstant operands: LIKE, comparisons, numeric truth conversion and NULL.
+--disable_warnings
+DROP TABLE IF EXISTS ifnull_double_not;
+--enable_warnings
+CREATE TABLE ifnull_double_not (id INT PRIMARY KEY, s VARCHAR(10), n INT);
+INSERT INTO ifnull_double_not VALUES (1, 'x', 2), (2, 'y', 0), (3, NULL, NULL);
+SELECT id FROM ifnull_double_not
+WHERE IFNULL((SELECT FALSE), !(!(s LIKE 'x'))) ORDER BY id;
+SELECT id FROM ifnull_double_not
+WHERE IFNULL((SELECT NULL), !(!(s LIKE 'x'))) ORDER BY id;
+SELECT id FROM ifnull_double_not
+WHERE IFNULL((SELECT NULL), !(!(!(!(s LIKE 'x'))))) ORDER BY id;
+SELECT id FROM ifnull_double_not
+WHERE IFNULL((SELECT NULL), !(!(n > 0))) ORDER BY id;
+SELECT id FROM ifnull_double_not
+WHERE IFNULL((SELECT NULL), !(!(n))) ORDER BY id;
+SELECT id FROM ifnull_double_not
+WHERE IFNULL((SELECT NULL), !(!(!(s LIKE 'x')))) ORDER BY id;
+# A correlated, nullable boolean subquery must also retain its behavior.
+SELECT t.id FROM ifnull_double_not t
+WHERE IFNULL((SELECT t2.n = 0 FROM ifnull_double_not t2 WHERE t2.id = t.id),
+             !(!(t.s LIKE 'x'))) ORDER BY t.id;
+DROP TABLE ifnull_double_not;

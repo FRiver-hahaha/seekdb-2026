@@ -1,0 +1,56 @@
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE "x")));
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE "x"));
+1
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE "x")));
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT TRUE), !(!(1 LIKE "x")));
+1
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(1 LIKE "1")));
+1
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(1 LIKE "x")));
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(NULL LIKE "x")));
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(!(!(1 LIKE "x")))));
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(!(!(1 LIKE "1")))));
+1
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(!(1 LIKE "x"))));
+1
+1
+DROP TABLE IF EXISTS ifnull_double_not;
+CREATE TABLE ifnull_double_not (id INT PRIMARY KEY, s VARCHAR(10), n INT);
+INSERT INTO ifnull_double_not VALUES (1, 'x', 2), (2, 'y', 0), (3, NULL, NULL);
+SELECT id FROM ifnull_double_not
+WHERE IFNULL((SELECT FALSE), !(!(s LIKE 'x'))) ORDER BY id;
+id
+SELECT id FROM ifnull_double_not
+WHERE IFNULL((SELECT NULL), !(!(s LIKE 'x'))) ORDER BY id;
+id
+1
+SELECT id FROM ifnull_double_not
+WHERE IFNULL((SELECT NULL), !(!(!(!(s LIKE 'x'))))) ORDER BY id;
+id
+1
+SELECT id FROM ifnull_double_not
+WHERE IFNULL((SELECT NULL), !(!(n > 0))) ORDER BY id;
+id
+1
+SELECT id FROM ifnull_double_not
+WHERE IFNULL((SELECT NULL), !(!(n))) ORDER BY id;
+id
+1
+SELECT id FROM ifnull_double_not
+WHERE IFNULL((SELECT NULL), !(!(!(s LIKE 'x')))) ORDER BY id;
+id
+2
+SELECT t.id FROM ifnull_double_not t
+WHERE IFNULL((SELECT t2.n = 0 FROM ifnull_double_not t2 WHERE t2.id = t.id),
+!(!(t.s LIKE 'x'))) ORDER BY t.id;
+id
+2
+DROP TABLE ifnull_double_not;
