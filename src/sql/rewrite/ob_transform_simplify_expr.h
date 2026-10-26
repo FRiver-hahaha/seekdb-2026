@@ -27,8 +27,9 @@ struct ObNotNullContext;
 class ObTransformSimplifyExpr : public ObTransformRule
 {
 public:
-  ObTransformSimplifyExpr(ObTransformerCtx *ctx)
-    : ObTransformRule(ctx, TransMethod::POST_ORDER, T_SIMPLIFY_EXPR)
+  ObTransformSimplifyExpr(ObTransformerCtx *ctx, bool deduplicate_only = false)
+    : ObTransformRule(ctx, TransMethod::POST_ORDER, T_SIMPLIFY_EXPR),
+      deduplicate_only_(deduplicate_only)
   {}
 
   virtual ~ObTransformSimplifyExpr() {}
@@ -219,6 +220,27 @@ private:
                                               ObIArray<ObRawExpr*> &extracted_preds);
   int add_constraint_for_convert_case_when_by_then(ObIArray<ObRawExpr *> &false_null_exprs,
                                                    ObIArray<ObRawExpr *> &true_exprs);
+
+  int deduplicate_stmt_conditions(ObDMLStmt *stmt, bool &trans_happened);
+  int deduplicate_join_conditions(ObQueryCtx &query_ctx,
+                                  TableItem *table,
+                                  bool &trans_happened);
+  bool is_safe_to_deduplicate(const ObRawExpr &expr) const;
+
+  bool deduplicate_only_;
+};
+
+// Vector index queries intentionally skip the general rewrite pipeline.  Keep
+// this rule narrow: it only applies the idempotent A AND/OR A => A rewrite to
+// deterministic predicates, without enabling the other expression rewrites.
+class ObTransformSimplifyVecFilter : public ObTransformSimplifyExpr
+{
+public:
+  ObTransformSimplifyVecFilter(ObTransformerCtx *ctx)
+    : ObTransformSimplifyExpr(ctx, true)
+  {}
+
+  virtual ~ObTransformSimplifyVecFilter() {}
 };
 }
 }
