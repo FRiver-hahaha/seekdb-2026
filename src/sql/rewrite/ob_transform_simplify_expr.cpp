@@ -1279,6 +1279,14 @@ int ObTransformSimplifyExpr::inner_remove_dummy_nvl(ObDMLStmt *stmt,
           ret = OB_ERR_UNEXPECTED;
           LOG_WARN("unexpected null bool expr", K(ret));
         } else if (OB_FAIL(new_child->formalize(ctx_->session_info_))) {
+        } else if (OB_FAIL(ObTransformUtils::add_cast_for_replace_if_need(
+                              *ctx_->expr_factory_, child_0, new_child, ctx_->session_info_))) {
+          // NOT always produces an INT32 result, while the operand it wraps may
+          // produce a wider type (e.g. LIKE produces INT64). Dropping the NOT
+          // pair must not change the result type seen by the parent, otherwise
+          // the parent may re-derive a wider type for its own operands and ask
+          // for a second implicit cast on an operand that already has one.
+          LOG_WARN("failed to keep result type after removing not chain", K(ret));
         } else {
           op_expr->get_param_expr(0) = new_child;
           if (OB_FAIL(expr->formalize(ctx_->session_info_))) {
@@ -2382,6 +2390,14 @@ int ObTransformSimplifyExpr::do_push_not(ObRawExpr *&expr,
       } else if (OB_ISNULL(temp)) {
         ret = OB_ERR_UNEXPECTED;
       } else if (OB_FAIL(temp->formalize(ctx_->session_info_))) {
+      } else if (OB_FAIL(ObTransformUtils::add_cast_for_replace_if_need(
+                            *expr_factory, expr, temp, ctx_->session_info_))) {
+        // NOT always produces an INT32 result, while the operand it wraps may
+        // produce a wider type (e.g. LIKE produces INT64). Dropping the NOT
+        // pair must not change the result type seen by the parent, otherwise
+        // the parent may re-derive a wider type for its own operands and ask
+        // for a second implicit cast on an operand that already has one.
+        LOG_WARN("failed to keep result type after removing not chain", K(ret));
       } else {
         expr = temp;
         is_valid = false;
