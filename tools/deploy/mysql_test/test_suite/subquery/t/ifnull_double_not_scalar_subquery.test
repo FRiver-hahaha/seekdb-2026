@@ -1,0 +1,11 @@
+# Regression test for #1477: eliminating a NOT pair must keep the result type
+# expected by the surrounding predicate. IFNULL with a boolean scalar subquery
+# and a double-negated LIKE used to fail type deduction with ERROR 4016.
+
+# Minimal reproducer from the issue: returned
+# "ERROR 4016 (HY000): Internal error" before the fix.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x')));
+
+# Control cases from the issue: unchanged behavior.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE 'x'));
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE 'x')));
