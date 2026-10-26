@@ -1,0 +1,16 @@
+# Regression for #1477: retyping IFNULL after double-NOT simplification.
+
+# The original failure and the two control cases from the issue.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE "x")));
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE "x"));
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE "x")));
+
+# Preserve the first operand when it is non-NULL, and evaluate the fallback
+# with SQL three-valued logic when the scalar subquery returns NULL.
+SELECT 1 FROM dual WHERE IFNULL((SELECT TRUE), !(!(1 LIKE "x")));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(1 LIKE "1")));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(1 LIKE "x")));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(NULL LIKE "x")));
+
+# An explicit conversion inside LIKE must remain effective after simplification.
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(CAST(1 AS CHAR) LIKE "1")));
