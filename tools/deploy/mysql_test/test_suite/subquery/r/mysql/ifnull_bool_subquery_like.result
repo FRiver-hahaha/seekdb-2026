@@ -1,0 +1,19 @@
+select 1 from dual where ifnull((select false), !(!(1 like "x")));
+1
+select 1 from dual where ifnull((select false), !(1 like "x"));
+1
+select 1 from dual where ifnull(false, !(!(1 like "x")));
+1
+select 1 from dual where ifnull((select true), !(!(1 like "x")));
+1
+1
+select 1 from dual where ifnull((select false), !(!(!(1 like "x"))));
+1
+select 1 from dual where ifnull((select false), !(!(!(!(1 like "x")))));
+1
+select ifnull((select false), !(!(1 like "x"))) as r;
+r
+0
+select ifnull((select true), 0) as v;
+v
+1

@@ -2381,6 +2381,27 @@ int ObTransformSimplifyExpr::do_push_not(ObRawExpr *&expr,
       if (OB_FAIL(ObRawExprUtils::try_create_bool_expr(cur, temp, *expr_factory))) {
       } else if (OB_ISNULL(temp)) {
         ret = OB_ERR_UNEXPECTED;
+      } else if (temp->get_data_type() != expr->get_data_type()) {
+        // try_create_bool_expr does not add a bool expr above an expression that
+        // is already boolean typed, e.g. LIKE. But such expression may have a
+        // different result type from T_OP_NOT, e.g. LIKE returns ObIntType while
+        // T_OP_NOT returns ObInt32Type. Replacing the NOT chain with it would
+        // change the result type of the whole expression, and a later type
+        // deduction of the parent expression may try to add an implicit cast
+        // above the implicit cast added by the previous type deduction, which
+        // raises OB_ERR_UNEXPECTED. Keep the original result type by adding the
+        // bool expr explicitly.
+        ObOpRawExpr *bool_expr = NULL;
+        if (OB_FAIL(expr_factory->create_raw_expr(T_OP_BOOL, bool_expr))) {
+        } else if (OB_ISNULL(bool_expr)) {
+          ret = OB_ERR_UNEXPECTED;
+        } else if (OB_FAIL(bool_expr->add_flag(IS_INNER_ADDED_EXPR))) {
+        } else if (OB_FAIL(bool_expr->set_param_expr(cur))) {
+        } else {
+          temp = bool_expr;
+        }
+      }
+      if (OB_FAIL(ret)) {
       } else if (OB_FAIL(temp->formalize(ctx_->session_info_))) {
       } else {
         expr = temp;

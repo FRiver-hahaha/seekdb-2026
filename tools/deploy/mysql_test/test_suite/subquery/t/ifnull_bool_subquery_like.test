@@ -1,0 +1,35 @@
+#owner: fanshoukang37-glitch
+#owner group: sql
+# tags: resolver, rewrite
+# description: issue #1477 - IFNULL with a boolean scalar subquery and a
+# double-negated LIKE must not raise internal error 4016.
+#
+# The rewrite rule that pushes NOT down replaces NOT(NOT(x)) with a bool
+# expression above x. For LIKE the replaced expression used to keep the
+# original int result type instead of the int32 result type of T_OP_NOT, so a
+# later type deduction tried to add an implicit cast above an existing
+# implicit cast and raised OB_ERR_UNEXPECTED (error 4016).
+
+# reproducer: must return 0 rows (previously ERROR 4016 "Internal error")
+select 1 from dual where ifnull((select false), !(!(1 like "x")));
+
+# control 1: one negation instead of two (worked before)
+select 1 from dual where ifnull((select false), !(1 like "x"));
+
+# control 2: literal instead of a scalar subquery (worked before)
+select 1 from dual where ifnull(false, !(!(1 like "x")));
+
+# control 3: the scalar subquery returns TRUE, IFNULL must prefer it
+select 1 from dual where ifnull((select true), !(!(1 like "x")));
+
+# control 4: odd number of NOTs, the replacement must keep the result type too
+select 1 from dual where ifnull((select false), !(!(!(1 like "x"))));
+
+# control 5: longer even NOT chain, same rewrite branch as the reproducer
+select 1 from dual where ifnull((select false), !(!(!(!(1 like "x")))));
+
+# control 6: select-list form, the WHERE rewrite never touches it
+select ifnull((select false), !(!(1 like "x"))) as r;
+
+# semantic sanity: IFNULL prefers the non-NULL scalar subquery value
+select ifnull((select true), 0) as v;
