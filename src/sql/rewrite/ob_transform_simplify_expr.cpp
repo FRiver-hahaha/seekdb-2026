@@ -2300,7 +2300,7 @@ int ObTransformSimplifyExpr::push_not(ObIArray<ObRawExpr*> &conditions, bool &tr
       ret = OB_ERR_UNEXPECTED;
     } else if (!child_expr->has_flag(CNT_NOT)) {
      //do nothing
-    } else if (OB_FAIL(recursive_push_not(child_expr, push_expr_map, trans_happened))) {
+    } else if (OB_FAIL(recursive_push_not(child_expr, push_expr_map, trans_happened, true))) {
     } else {/*do nothing*/}
   }
   if (OB_SUCC(ret) && trans_happened) {
@@ -2312,9 +2312,11 @@ int ObTransformSimplifyExpr::push_not(ObIArray<ObRawExpr*> &conditions, bool &tr
 
 int ObTransformSimplifyExpr::recursive_push_not(ObRawExpr *&expr,
                                                 hash::ObHashMap<uint64_t, ObRawExpr *> &push_expr_map,
-                                                bool &trans_happened)
+                                                bool &trans_happened,
+                                                bool predicate_context)
 {
   int ret = OB_SUCCESS;
+  ObRawExpr *original_expr = expr;
   if (OB_ISNULL(expr)) {
     ret = OB_ERR_UNEXPECTED;
   } else if (!expr->has_flag(IS_NOT)) {
@@ -2327,8 +2329,19 @@ int ObTransformSimplifyExpr::recursive_push_not(ObRawExpr *&expr,
       ret = OB_ERR_UNEXPECTED;
     } else if (!child_expr->has_flag(CNT_NOT)) {
       //do nothing
-    } else if (OB_FAIL(SMART_CALL(recursive_push_not(child_expr, push_expr_map, trans_happened)))) {
+    } else if (OB_FAIL(SMART_CALL(recursive_push_not(child_expr, push_expr_map, trans_happened,
+                         T_OP_AND == expr->get_expr_type() || T_OP_OR == expr->get_expr_type() ||
+                         T_OP_XOR == expr->get_expr_type() || T_OP_NOT == expr->get_expr_type())))) {
     } else {/*do nothing*/}
+  }
+  // A predicate only needs its truth value, but a value used by a parent
+  // expression must retain its type. For example, removing NOT NOT can
+  // replace an INT32 result with an INT64 LIKE result and change IFNULL's
+  // operand casts during the next formalization. Keep predicates unwrapped
+  // so index-range extraction still sees the comparison directly.
+  if (OB_SUCC(ret) && !predicate_context && original_expr != expr) {
+    OZ(ObTransformUtils::add_cast_for_replace_if_need(
+        *ctx_->expr_factory_, original_expr, expr, ctx_->session_info_));
   }
   return ret;
 }
