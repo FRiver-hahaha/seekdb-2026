@@ -1,0 +1,84 @@
+DROP TABLE IF EXISTS ifnull_double_not_1477;
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE "x")));
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE "x"));
+1
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE "x")));
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 > 2)));
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT TRUE), !(!(1 LIKE "x")));
+1
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(1 LIKE '1')));
+1
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(1 LIKE 'x')));
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE WHERE FALSE), !(!(1 LIKE '1')));
+1
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(!(!(1 LIKE 'x')))));
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(!(1 LIKE 'x'))));
+1
+1
+SELECT IFNULL((SELECT NULL), !(!(1 LIKE '1'))) AS v;
+v
+1
+SELECT IFNULL((SELECT NULL), !(!(1 LIKE NULL))) AS v;
+v
+NULL
+SELECT !(!(2)) AS nonzero, !(!(0)) AS zero_value, !(!(NULL)) AS null_value;
+nonzero	zero_value	null_value
+1	0	NULL
+SELECT IFNULL(!(!(1 LIKE '1')), (SELECT FALSE)) AS v;
+v
+1
+CREATE TABLE ifnull_double_not_1477 (id INT PRIMARY KEY, s VARCHAR(8), p VARCHAR(8), b TINYINT);
+INSERT INTO ifnull_double_not_1477 VALUES (1, 'abc', 'a%', NULL), (2, 'abc', 'z%', NULL), (3, NULL, 'a%', NULL), (4, 'abc', NULL, NULL), (5, 'abc', 'a%', 0), (6, 'abc', 'z%', 2);
+SELECT id FROM ifnull_double_not_1477 WHERE IFNULL((SELECT NULL), !(!(s LIKE p))) ORDER BY id;
+id
+1
+5
+SELECT t.id FROM ifnull_double_not_1477 t WHERE IFNULL((SELECT b FROM ifnull_double_not_1477 u WHERE u.id = t.id), !(!(t.s LIKE t.p))) ORDER BY t.id;
+id
+1
+6
+SELECT id FROM ifnull_double_not_1477 WHERE IFNULL(!(!(s LIKE p)), (SELECT FALSE)) ORDER BY id;
+id
+1
+5
+SELECT id, IFNULL(!(!(s LIKE p)), (SELECT TRUE)) AS v FROM ifnull_double_not_1477 ORDER BY id;
+id	v
+1	1
+2	0
+3	1
+4	1
+5	1
+6	0
+SELECT id FROM ifnull_double_not_1477 GROUP BY id, s, p HAVING IFNULL((SELECT NULL), !(!(s LIKE p))) ORDER BY id;
+id
+1
+5
+SELECT t.id FROM ifnull_double_not_1477 t JOIN (SELECT 1 AS k) d ON IFNULL((SELECT NULL), !(!(t.s LIKE t.p))) ORDER BY t.id;
+id
+1
+5
+SELECT id FROM ifnull_double_not_1477 WHERE IFNULL((SELECT NULL), !(!(!(!(s LIKE p))))) ORDER BY id;
+id
+1
+5
+SELECT id FROM ifnull_double_not_1477 WHERE IFNULL((SELECT NULL), !(!(s LIKE p))) ORDER BY id;
+id
+1
+5
+SELECT id, IFNULL(!(!(b)), (SELECT NULL)) AS v FROM ifnull_double_not_1477 ORDER BY id;
+id	v
+1	NULL
+2	NULL
+3	NULL
+4	NULL
+5	0
+6	1
+DROP TABLE ifnull_double_not_1477;

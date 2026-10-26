@@ -1,0 +1,57 @@
+# Regression for issue #1477: eliminating NOT pairs must preserve result types.
+# The first statement fails with error 4016 before the rewrite fix.
+--disable_warnings
+DROP TABLE IF EXISTS ifnull_double_not_1477;
+--enable_warnings
+
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE "x")));
+
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE "x"));
+
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE "x")));
+
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 > 2)));
+
+SELECT 1 FROM dual WHERE IFNULL((SELECT TRUE), !(!(1 LIKE "x")));
+
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(1 LIKE '1')));
+
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(1 LIKE 'x')));
+
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE WHERE FALSE), !(!(1 LIKE '1')));
+
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(!(!(1 LIKE 'x')))));
+
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(!(1 LIKE 'x'))));
+
+SELECT IFNULL((SELECT NULL), !(!(1 LIKE '1'))) AS v;
+
+SELECT IFNULL((SELECT NULL), !(!(1 LIKE NULL))) AS v;
+
+SELECT !(!(2)) AS nonzero, !(!(0)) AS zero_value, !(!(NULL)) AS null_value;
+
+SELECT IFNULL(!(!(1 LIKE '1')), (SELECT FALSE)) AS v;
+
+CREATE TABLE ifnull_double_not_1477 (id INT PRIMARY KEY, s VARCHAR(8), p VARCHAR(8), b TINYINT);
+
+INSERT INTO ifnull_double_not_1477 VALUES (1, 'abc', 'a%', NULL), (2, 'abc', 'z%', NULL), (3, NULL, 'a%', NULL), (4, 'abc', NULL, NULL), (5, 'abc', 'a%', 0), (6, 'abc', 'z%', 2);
+
+SELECT id FROM ifnull_double_not_1477 WHERE IFNULL((SELECT NULL), !(!(s LIKE p))) ORDER BY id;
+
+SELECT t.id FROM ifnull_double_not_1477 t WHERE IFNULL((SELECT b FROM ifnull_double_not_1477 u WHERE u.id = t.id), !(!(t.s LIKE t.p))) ORDER BY t.id;
+
+SELECT id FROM ifnull_double_not_1477 WHERE IFNULL(!(!(s LIKE p)), (SELECT FALSE)) ORDER BY id;
+
+SELECT id, IFNULL(!(!(s LIKE p)), (SELECT TRUE)) AS v FROM ifnull_double_not_1477 ORDER BY id;
+
+SELECT id FROM ifnull_double_not_1477 GROUP BY id, s, p HAVING IFNULL((SELECT NULL), !(!(s LIKE p))) ORDER BY id;
+
+SELECT t.id FROM ifnull_double_not_1477 t JOIN (SELECT 1 AS k) d ON IFNULL((SELECT NULL), !(!(t.s LIKE t.p))) ORDER BY t.id;
+
+SELECT id FROM ifnull_double_not_1477 WHERE IFNULL((SELECT NULL), !(!(!(!(s LIKE p))))) ORDER BY id;
+
+SELECT id FROM ifnull_double_not_1477 WHERE IFNULL((SELECT NULL), !(!(s LIKE p))) ORDER BY id;
+
+SELECT id, IFNULL(!(!(b)), (SELECT NULL)) AS v FROM ifnull_double_not_1477 ORDER BY id;
+
+DROP TABLE ifnull_double_not_1477;
