@@ -133,6 +133,49 @@ mysql -h127.0.0.1 -P10000 -uroot
 
 Use the actual generated port if it differs.
 
+## UUID initialization in restricted Linux environments
+
+On Linux, UUIDv1 node initialization first opens an IPv4 datagram socket and
+uses `SIOCGIFCONF` to enumerate interfaces, `SIOCGIFFLAGS` to skip loopback,
+and `SIOCGIFHWADDR` to read a MAC address. These operations can be denied by
+the runtime's security policy even when the server can bind its SQL port.
+
+If no MAC address can be obtained, the server uses six bytes from Linux
+`getrandom()` and sets the multicast bit, following
+[RFC 9562 section 6.10](https://www.rfc-editor.org/rfc/rfc9562.html#section-6.10).
+This random node is retained for the server lifetime. UUIDs retain their
+version 1 timestamp and clock sequence fields; the node has 47 random bits
+after setting the multicast bit. Random nodes provide probabilistic uniqueness,
+not a guarantee that separate processes choose different nodes. The fallback
+does not use a fixed node, a timestamp seed, or a process ID as entropy.
+
+If UUID initialization still fails, inspect `log/seekdb.log` under the base
+directory. MAC lookup warnings name the failed socket or ioctl operation and
+record `sys_errno` immediately after that operation; ioctl warnings for an
+individual interface also include its name. An enumeration that succeeds but
+finds no usable address is reported separately without attributing a stale
+`errno` to a syscall. A subsequent warning identifies when the random fallback
+is attempted, and a `getrandom failed` warning records its own error.
+
+The fallback requires permission to call `getrandom()` and an initialized
+kernel random source; initialization waits for entropy if necessary. If the
+random source is unavailable, startup fails instead of using a predictable
+node. Ask the environment operator to allow this operation or permit the
+interface operations above. These are UUID initialization prerequisites, not
+a certification that all other server operations are supported in that sandbox.
+An error from another interface enumeration tool does not identify which of
+these SeekDB operations failed; use the operation-specific server warnings.
+
+Run the Linux regression tests for denied socket, interface, and random-source
+access with:
+
+```bash
+./build.py test //unittest/sql/engine/expr:test_uuid_node --test_output=errors
+```
+
+These tests install seccomp filters in child processes and require the test
+environment to allow `PR_SET_NO_NEW_PRIVS` and `PR_SET_SECCOMP`.
+
 ## Stop and remove the local deployment
 
 ```bash

@@ -167,6 +167,14 @@ cc_library(
     visibility = ["//src:__subpackages__"],
 )
 
+cc_library(
+    name = "uuid_test_headers",
+    testonly = True,
+    deps = [":sql_runtime_interface"] + _SQL_INTERFACE_NATIVE_DEPS,
+    tags = ["manual"],
+    visibility = ["//unittest/sql/engine/expr:__pkg__"],
+)
+
 # Observer is the final composition root for the legacy physical retrieval
 # engine. Expose only the two concrete SQL types needed to bind that engine;
 # the rest of SQL's implementation headers remain SQL-private.
