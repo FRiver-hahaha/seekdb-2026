@@ -2686,46 +2686,51 @@ int ObRawExprUtils::try_add_cast_expr_above(ObRawExprFactory *expr_factory,
   const ObRawExprResType &src_type = expr.get_result_type();
   CK(OB_NOT_NULL(session) && OB_NOT_NULL(expr_factory));
   OZ(ObRawExprUtils::check_need_cast_expr(src_type, dst_type, need_cast, ignore_dup_cast_error));
-  if (OB_SUCC(ret) && need_cast) {
-    if (T_FUN_SYS_CAST == expr.get_expr_type()
-        && expr.has_flag(IS_OP_OPERAND_IMPLICIT_CAST)
-        && !ignore_dup_cast_error
-        && !((src_type.is_collection_sql_type()
-                  && (dst_type.is_character_type() || dst_type.is_null()))
-            || (src_type.is_character_type() && dst_type.is_character_type())))
-      {
+  // An expression may be deduced more than once (for example, the rewrite phase pushes
+  // NOT down and changes the type of a sibling), so an implicit cast added by a previous
+  // deduce can be stale. In that case rebuild the cast from its input instead of
+  // reporting a duplicate implicit cast.
+  ObRawExpr *cast_src = &expr;
+  if (OB_SUCC(ret) && need_cast
+      && T_FUN_SYS_CAST == expr.get_expr_type()
+      && expr.has_flag(IS_OP_OPERAND_IMPLICIT_CAST)
+      && !ignore_dup_cast_error
+      && !((src_type.is_collection_sql_type()
+                && (dst_type.is_character_type() || dst_type.is_null()))
+           || (src_type.is_character_type() && dst_type.is_character_type()))) {
+    cast_src = expr.get_param_expr(0);
+    if (OB_ISNULL(cast_src)) {
       ret = OB_ERR_UNEXPECTED;
-#ifdef DEBUG
-      LOG_ERROR("try to add implicit cast again, check if type deduction is correct",
-                K(ret), K(expr), K(dst_type),
-                K(session->get_current_query_string()));
-#else
-      LOG_WARN("try to add implicit cast again, check if type deduction is correct",
-                K(ret), K(expr), K(dst_type), K(src_type), K(ignore_dup_cast_error),
-                K(session->get_current_query_string()));
-#endif
+      LOG_WARN("unexpected null child of implicit cast", K(ret), K(expr), K(dst_type));
     } else {
-      //setup implicit cast charset convert ignore error
-      ObCastMode cm_zf = cm;
-      if ((cm_zf & CM_COLUMN_CONVERT) != 0) {
-       //if CM_CHARSET_CONVERT_IGNORE_ERR should be set is judged in column_conv expr.
-      } else {
-        cm_zf |= CM_CHARSET_CONVERT_IGNORE_ERR;
-      }
-      // setup zerofill cm
-      // eg: select concat(cast(c_zf as char(10)), cast(col_no_zf as char(10))) from t1;
-      if (dst_type.is_string_type() &&
-          expr.get_result_type().has_result_flag(ZEROFILL_FLAG)) {
-        cm_zf |= CM_ZERO_FILL;
-      }
-      if (dst_type.get_cast_mode() != 0) {
-        cm_zf |= dst_type.get_cast_mode();
-      }
-      ObSysFunRawExpr *cast_expr = NULL;
-      OZ(ObRawExprUtils::create_cast_expr(*expr_factory, &expr, dst_type, cast_expr,
-                                          session, false, cm_zf, local_vars, local_var_id));
-      CK(OB_NOT_NULL(new_expr = dynamic_cast<ObRawExpr*>(cast_expr)));
+      OZ(ObRawExprUtils::check_need_cast_expr(cast_src->get_result_type(),
+                                              dst_type, need_cast, ignore_dup_cast_error));
     }
+  }
+  if (OB_SUCC(ret) && need_cast) {
+    //setup implicit cast charset convert ignore error
+    ObCastMode cm_zf = cm;
+    if ((cm_zf & CM_COLUMN_CONVERT) != 0) {
+     //if CM_CHARSET_CONVERT_IGNORE_ERR should be set is judged in column_conv expr.
+    } else {
+      cm_zf |= CM_CHARSET_CONVERT_IGNORE_ERR;
+    }
+    // setup zerofill cm
+    // eg: select concat(cast(c_zf as char(10)), cast(col_no_zf as char(10))) from t1;
+    if (dst_type.is_string_type() &&
+        cast_src->get_result_type().has_result_flag(ZEROFILL_FLAG)) {
+      cm_zf |= CM_ZERO_FILL;
+    }
+    if (dst_type.get_cast_mode() != 0) {
+      cm_zf |= dst_type.get_cast_mode();
+    }
+    ObSysFunRawExpr *cast_expr = NULL;
+    OZ(ObRawExprUtils::create_cast_expr(*expr_factory, cast_src, dst_type, cast_expr,
+                                        session, false, cm_zf, local_vars, local_var_id));
+    CK(OB_NOT_NULL(new_expr = dynamic_cast<ObRawExpr*>(cast_expr)));
+  } else if (OB_SUCC(ret) && cast_src != &expr) {
+    // the stale implicit cast is no longer needed, use its input directly
+    new_expr = cast_src;
   }
   return ret;
 }

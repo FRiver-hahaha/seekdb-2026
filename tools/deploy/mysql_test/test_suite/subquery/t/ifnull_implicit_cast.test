@@ -1,0 +1,24 @@
+# owner: liangshiwen
+# owner group: SQL1
+# tags: resolver
+# description: IFNULL over a tinyint scalar subquery and a doubly negated LIKE,
+#              re-deduced after the rewrite phase pushes NOT down (issue #1477)
+#
+
+# all of these used to fail with ERROR 4016 (Internal error)
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE 'x'));
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE 'x')));
+SELECT 1 FROM dual WHERE NOT IFNULL((SELECT FALSE), !(!(1 LIKE 'x')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x'))) IS TRUE;
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x'))) OR FALSE;
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x'))) AND TRUE;
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x'))) = 0;
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x'))) = TRUE;
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x'))) <> 1;
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x'))) > 0;
+SELECT 1 FROM dual WHERE IFNULL((SELECT 0), !(!(1 LIKE 'x')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(1 LIKE 'x')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(TRUE)));
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x'))) OR TRUE;
+SELECT IFNULL(1,2), IFNULL(NULL,3), IFNULL('a','b'), 1 LIKE '1', NOT (1 LIKE '2');
