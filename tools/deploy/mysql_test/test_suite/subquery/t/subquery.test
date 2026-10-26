@@ -532,3 +532,20 @@ WHERE
 drop table s;
 drop table table0_hash_pk_parts_1_bigint;
 drop table ff;
+
+--echo # Issue 1477: eliminating even NOT chains must preserve the operand type.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE 'x'));
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE 'x')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT TRUE), !(!(1 LIKE 'x')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!('x' LIKE 'x')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!('y' LIKE 'x')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(NULL LIKE 'x')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(!(!(1 LIKE 'x')))));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(-7)));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(0)));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(NULL)));
+SELECT IFNULL(!(!('x' LIKE 'x')), (SELECT FALSE)) AS value;
+SELECT IFNULL(!(!('y' LIKE 'x')), (SELECT TRUE)) AS value;
+SELECT IFNULL(!(!(NULL LIKE 'x')), (SELECT TRUE)) AS value;
+SELECT IFNULL(!(!(-7)), (SELECT FALSE)) AS value;
