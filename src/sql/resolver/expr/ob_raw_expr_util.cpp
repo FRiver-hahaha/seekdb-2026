@@ -2687,9 +2687,24 @@ int ObRawExprUtils::try_add_cast_expr_above(ObRawExprFactory *expr_factory,
   CK(OB_NOT_NULL(session) && OB_NOT_NULL(expr_factory));
   OZ(ObRawExprUtils::check_need_cast_expr(src_type, dst_type, need_cast, ignore_dup_cast_error));
   if (OB_SUCC(ret) && need_cast) {
+    bool dup_cast_on_scalar_query_ref = false;
+    if (T_FUN_SYS_CAST == expr.get_expr_type()
+        && expr.has_flag(IS_OP_OPERAND_IMPLICIT_CAST)) {
+      // The operand of a scalar subquery ref may be re-deducted to a wider
+      // merged type during query rewrite (e.g. IFNULL), which legitimately
+      // needs one more cast above the existing implicit cast. Nesting two
+      // numeric casts keeps the semantics, so do not report the duplicate
+      // implicit cast error for this case.
+      const ObRawExpr *inner = expr.get_param_expr(0);
+      dup_cast_on_scalar_query_ref =
+          OB_NOT_NULL(inner)
+          && T_REF_QUERY == inner->get_expr_type()
+          && static_cast<const ObQueryRefRawExpr *>(inner)->is_scalar();
+    }
     if (T_FUN_SYS_CAST == expr.get_expr_type()
         && expr.has_flag(IS_OP_OPERAND_IMPLICIT_CAST)
         && !ignore_dup_cast_error
+        && !dup_cast_on_scalar_query_ref
         && !((src_type.is_collection_sql_type()
                   && (dst_type.is_character_type() || dst_type.is_null()))
             || (src_type.is_character_type() && dst_type.is_character_type())))
