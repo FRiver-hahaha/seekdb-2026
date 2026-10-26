@@ -1,0 +1,53 @@
+# Shared string comparisons used by FTS sorting and document-ID merging.
+--disable_warnings
+DROP DATABASE IF EXISTS fts_collation;
+CREATE DATABASE fts_collation;
+USE fts_collation;
+--enable_warnings
+SET NAMES utf8mb4;
+
+CREATE TABLE words_ci (id INT PRIMARY KEY, word VARCHAR(64) COLLATE utf8mb4_general_ci);
+INSERT INTO words_ci VALUES
+  (1, 'resume'), (2, 'résumé'), (3, 'RESUME'),
+  (4, 'cafe'), (5, 'café'), (6, 'cafe '),
+  (7, ''), (8, ' '), (9, '  '), (10, NULL),
+  (11, '中文'), (12, '中文'), (13, '中文 '), (14, '汉字'),
+  (15, 'ＡＢＣ'), (16, 'abc'), (17, '😀'), (18, '𠀀'),
+  (19, CONVERT(UNHEX('610062') USING utf8mb4)),
+  (20, CONVERT(UNHEX('61006200') USING utf8mb4));
+CREATE TABLE words_bin (id INT PRIMARY KEY, word VARCHAR(64) COLLATE utf8mb4_bin);
+INSERT INTO words_bin SELECT * FROM words_ci;
+CREATE TABLE words_unicode (id INT PRIMARY KEY, word VARCHAR(64) COLLATE utf8mb4_unicode_ci);
+INSERT INTO words_unicode SELECT * FROM words_ci;
+CREATE TABLE binary_ids (id INT PRIMARY KEY, word VARBINARY(64));
+INSERT INTO binary_ids VALUES
+  (1, UNHEX('')), (2, UNHEX('00')), (3, UNHEX('0000')),
+  (4, UNHEX('0001')), (5, UNHEX('01')), (6, UNHEX('0100')),
+  (7, UNHEX('0120')), (8, UNHEX('20')), (9, UNHEX('2020')),
+  (10, UNHEX('80')), (11, UNHEX('ff')), (12, UNHEX('ffff')),
+  (13, UNHEX('0001')), (14, NULL);
+
+SELECT GROUP_CONCAT(id ORDER BY word, id) AS ordered_ids FROM words_ci;
+SELECT MIN(id), COUNT(*), SUM(id) FROM words_ci GROUP BY word ORDER BY MIN(id);
+SELECT COUNT(*), SUM(a.id*1000+b.id) FROM words_ci a JOIN words_ci b ON a.word=b.word;
+SELECT GROUP_CONCAT(id ORDER BY word, id) AS ordered_ids FROM words_bin;
+SELECT MIN(id), COUNT(*), SUM(id) FROM words_bin GROUP BY word ORDER BY MIN(id);
+SELECT COUNT(*), SUM(a.id*1000+b.id) FROM words_bin a JOIN words_bin b ON a.word=b.word;
+SELECT GROUP_CONCAT(id ORDER BY word, id) AS ordered_ids FROM words_unicode;
+SELECT MIN(id), COUNT(*), SUM(id) FROM words_unicode GROUP BY word ORDER BY MIN(id);
+SELECT COUNT(*), SUM(a.id*1000+b.id) FROM words_unicode a JOIN words_unicode b ON a.word=b.word;
+SELECT GROUP_CONCAT(id ORDER BY word, id) AS ordered_ids FROM binary_ids;
+SELECT MIN(id), COUNT(*), SUM(id) FROM binary_ids GROUP BY word ORDER BY MIN(id);
+SELECT COUNT(*), SUM(a.id*1000+b.id) FROM binary_ids a JOIN binary_ids b ON a.word=b.word;
+
+# Exercise comparisons during index construction and indexed range access too.
+CREATE INDEX word_ci ON words_ci(word);
+CREATE INDEX word_bin ON words_bin(word);
+CREATE INDEX word_unicode ON words_unicode(word);
+CREATE INDEX word_binary ON binary_ids(word);
+SELECT GROUP_CONCAT(id ORDER BY id) FROM words_ci WHERE word='cafe';
+SELECT GROUP_CONCAT(id ORDER BY id) FROM words_bin WHERE word='cafe';
+SELECT GROUP_CONCAT(id ORDER BY id) FROM words_unicode WHERE word='resume';
+SELECT GROUP_CONCAT(id ORDER BY id) FROM binary_ids WHERE word>=UNHEX('00') AND word<UNHEX('20');
+SELECT GROUP_CONCAT(id ORDER BY id) FROM binary_ids WHERE word=UNHEX('0001');
+DROP DATABASE fts_collation;

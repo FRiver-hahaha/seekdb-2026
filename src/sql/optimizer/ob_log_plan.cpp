@@ -12039,12 +12039,44 @@ int ObLogPlan::prepare_text_retrieval_scan(const ObIArray<ObRawExpr *> &scan_mat
     ObTextRetrievalInfo &tr_info = table_scan->get_text_retrieval_info();
     tr_info.match_expr_ = match_against;
     tr_info.pushdown_match_filter_ = match_pred;
+    // In natural-language mode every posting contributes a positive BM25
+    // score. A bare WHERE MATCH predicate only needs the union of document
+    // IDs if no other expression observes that score. Keep score computation
+    // for BOOLEAN mode, thresholds, projections, ordering and subqueries.
+    if (NATURAL_LANGUAGE_MODE == match_against->get_mode_flag()
+        && T_OP_BOOL == match_pred->get_expr_type()
+        && 1 == match_pred->get_param_count()
+        && match_pred->get_param_expr(0) == match_against
+        && get_stmt()->is_select_stmt()
+        && get_stmt()->get_subquery_exprs().empty()) {
+      ObSEArray<ObRawExpr *, 16> other_exprs;
+      ObStmtExprGetter visitor;
+      visitor.set_relation_scope();
+      visitor.remove_scope(SCOPE_WHERE);
+      bool score_observed = false;
+      if (OB_FAIL(get_stmt()->get_relation_exprs(other_exprs, visitor))) {
+      } else {
+        for (int64_t i = 0; !score_observed && i < other_exprs.count(); ++i) {
+          score_observed = other_exprs.at(i)->has_flag(CNT_MATCH_EXPR);
+        }
+        const ObIArray<ObRawExpr *> &conditions = get_stmt()->get_condition_exprs();
+        for (int64_t i = 0; !score_observed && i < conditions.count(); ++i) {
+          score_observed = conditions.at(i) != match_pred
+              && conditions.at(i)->has_flag(CNT_MATCH_EXPR);
+        }
+        if (!score_observed) {
+          tr_info.need_calc_relevance_ = false;
+          tr_info.pushdown_match_filter_ = nullptr;
+        }
+      }
+    }
     // The mapping table is absent when the data-table rowkey is used as the document ID.
     table_scan->set_doc_id_index_table_id(tr_info.doc_id_idx_tid_);
     if (table_scan->is_vec_adaptive_scan() || table_scan->is_vec_idx_scan_post_filter()) {
       table_scan->set_rowkey_doc_table_id(tr_info.rowkey_idx_tid_);
     }
-    if (OB_FAIL(table_scan->set_is_skip_rowkey_doc(tr_info.doc_id_idx_tid_ == OB_INVALID_ID))) {
+    if (OB_FAIL(ret)) {
+    } else if (OB_FAIL(table_scan->set_is_skip_rowkey_doc(tr_info.doc_id_idx_tid_ == OB_INVALID_ID))) {
     } else if (OB_FAIL(table_scan->set_is_skip_rowkey_doc(tr_info.rowkey_idx_tid_ == OB_INVALID_ID))) {
     }
   }

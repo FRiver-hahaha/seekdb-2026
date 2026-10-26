@@ -1,0 +1,137 @@
+DROP DATABASE IF EXISTS fts_membership;
+CREATE DATABASE fts_membership;
+USE fts_membership;
+SET NAMES utf8mb4;
+SET ob_query_timeout = 10000000000;
+CREATE TABLE docs (id INT PRIMARY KEY, body TEXT,
+FULLTEXT INDEX f_beng(body) WITH PARSER beng) CHARSET=utf8mb4;
+BEGIN;
+INSERT INTO docs VALUES (1600, NULL), (1601, ''), (1602, 'the with and');
+COMMIT;
+SELECT COUNT(*), SUM(id) FROM docs WHERE MATCH(body) AGAINST('database alpha beta');
+COUNT(*)	SUM(id)
+1153	886657
+SELECT COUNT(*), SUM(id) FROM docs WHERE MATCH(body) AGAINST('database database alpha beta beta');
+COUNT(*)	SUM(id)
+1153	886657
+SELECT COUNT(*), SUM(id) FROM docs WHERE MATCH(body) AGAINST('alpha missingword') AND id BETWEEN 100 AND 1100;
+COUNT(*)	SUM(id)
+501	300600
+SELECT COUNT(*) FROM docs WHERE MATCH(body) AGAINST('missingword');
+COUNT(*)
+0
+SELECT COUNT(*) FROM docs WHERE MATCH(body) AGAINST('');
+COUNT(*)
+0
+SELECT COUNT(*) FROM docs WHERE MATCH(body) AGAINST('the with');
+COUNT(*)
+0
+SELECT COUNT(*) FROM docs WHERE MATCH(body) AGAINST(NULL);
+COUNT(*)
+0
+SELECT COUNT(*), SUM(id) FROM
+(SELECT id FROM docs WHERE MATCH(body) AGAINST('database alpha beta') ORDER BY id LIMIT 31 OFFSET 17) t;
+COUNT(*)	SUM(id)
+31	1354
+SELECT COUNT(*) FROM
+(SELECT id FROM docs WHERE MATCH(body) AGAINST('database alpha beta') LIMIT 0) t;
+COUNT(*)
+0
+SELECT id, ROUND(MATCH(body) AGAINST('database alpha beta'), 10) AS score
+FROM docs WHERE MATCH(body) AGAINST('database alpha beta') ORDER BY score DESC, id LIMIT 6;
+id	score
+4	0.7448591358
+8	0.7448591358
+12	0.7448591358
+16	0.7448591358
+20	0.7448591358
+24	0.7448591358
+SELECT id, MATCH(body) AGAINST('database alpha beta') != 0 AS found
+FROM docs WHERE MATCH(body) AGAINST('database alpha beta') ORDER BY id LIMIT 6;
+id	found
+1	1
+2	1
+4	1
+5	1
+6	1
+8	1
+SELECT COUNT(*), SUM(id) FROM docs WHERE MATCH(body) AGAINST('database alpha beta') > 0;
+COUNT(*)	SUM(id)
+1153	886657
+SELECT COUNT(*), SUM(id) FROM docs WHERE MATCH(body) AGAINST('database alpha beta') > 0.01;
+COUNT(*)	SUM(id)
+1153	886657
+SELECT ROUND(SUM(MATCH(body) AGAINST('database alpha beta')), 8) AS total_score
+FROM docs WHERE MATCH(body) AGAINST('database alpha beta');
+total_score
+810.22896240
+SELECT id, ROUND(SUM(MATCH(body) AGAINST('database alpha beta')), 10) AS score
+FROM docs WHERE MATCH(body) AGAINST('database alpha beta')
+GROUP BY id HAVING score > 0.01 ORDER BY id LIMIT 6;
+id	score
+1	0.7006369427
+2	0.6626506024
+4	0.7448591358
+5	0.7006369427
+6	0.6626506024
+8	0.7448591358
+SELECT COUNT(*), SUM(id) FROM docs WHERE MATCH(body) AGAINST('+database -audit' IN BOOLEAN MODE);
+COUNT(*)	SUM(id)
+384	295680
+SELECT COUNT(*), SUM(id) FROM docs WHERE NOT MATCH(body) AGAINST('database');
+COUNT(*)	SUM(id)
+771	595011
+SELECT COUNT(*), SUM(id) FROM docs WHERE MATCH(body) AGAINST('database') OR id=1600;
+COUNT(*)	SUM(id)
+770	593345
+PREPARE member_query FROM 'SELECT COUNT(*), SUM(id) FROM docs WHERE MATCH(body) AGAINST(?)';
+SET @q='missingword';
+EXECUTE member_query USING @q;
+COUNT(*)	SUM(id)
+0	NULL
+SET @q='database alpha beta';
+EXECUTE member_query USING @q;
+COUNT(*)	SUM(id)
+1153	886657
+SET @q='alpha';
+EXECUTE member_query USING @q;
+COUNT(*)	SUM(id)
+768	590592
+SET @q='beta';
+EXECUTE member_query USING @q;
+COUNT(*)	SUM(id)
+769	590977
+DEALLOCATE PREPARE member_query;
+PREPARE threshold_query FROM 'SELECT COUNT(*), SUM(id) FROM docs WHERE MATCH(body) AGAINST(?) > ?';
+SET @q='database alpha beta';
+SET @threshold=0.0;
+EXECUTE threshold_query USING @q, @threshold;
+COUNT(*)	SUM(id)
+1153	886657
+SET @threshold=0.01;
+EXECUTE threshold_query USING @q, @threshold;
+COUNT(*)	SUM(id)
+1153	886657
+SET @threshold=1.0;
+EXECUTE threshold_query USING @q, @threshold;
+COUNT(*)	SUM(id)
+0	NULL
+DEALLOCATE PREPARE threshold_query;
+SELECT COUNT(*), SUM(id) FROM docs d WHERE MATCH(body) AGAINST('database alpha beta')
+AND EXISTS (SELECT 1 FROM docs other WHERE other.id=d.id AND other.id < 100);
+COUNT(*)	SUM(id)
+74	3675
+BEGIN;
+UPDATE docs SET body='missingword' WHERE id BETWEEN 1 AND 40;
+DELETE FROM docs WHERE id BETWEEN 41 AND 80;
+SELECT COUNT(*), SUM(id) FROM docs WHERE MATCH(body) AGAINST('database alpha beta');
+COUNT(*)	SUM(id)
+1093	884237
+SELECT COUNT(*), SUM(id) FROM docs WHERE MATCH(body) AGAINST('missingword');
+COUNT(*)	SUM(id)
+40	820
+ROLLBACK;
+SELECT COUNT(*), SUM(id) FROM docs WHERE MATCH(body) AGAINST('database alpha beta');
+COUNT(*)	SUM(id)
+1153	886657
+DROP DATABASE fts_membership;

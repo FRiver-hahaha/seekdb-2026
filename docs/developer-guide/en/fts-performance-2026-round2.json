@@ -1,0 +1,1254 @@
+{
+  "schema_version": 2,
+  "comparison_target": "First scored submission versus the second optimization; no addition of reductions from earlier experiments",
+  "first_submission_commit": "e91a37e3cac0f92a329d40a2dc7b715ebf510e40",
+  "candidate_product_commit": "79f77cbb24fd7aa7627c37f7716dc9202cd11686",
+  "first_official_score_user_reported": {
+    "raw_score": 13.525,
+    "weighted_score": 6.762,
+    "metric_timings_available": false,
+    "task_id_available": false,
+    "sha_independently_confirmed_from_task": false
+  },
+  "candidate_official_score": null,
+  "execution_order": [
+    "old_before: three full runs",
+    "candidate: three full runs",
+    "old_after: three full runs"
+  ],
+  "forward_comparison": {
+    "runs": {
+      "before": {
+        "metadata": {
+          "label": "round2-affinity-before",
+          "source_commit": "ef4810de9bcacec8c725f14b23fea27e80a12d20",
+          "binary_commit": "e91a37e3cac0f92a329d40a2dc7b715ebf510e40",
+          "binary": "/home/ganzw/oceanbase/.tooling/seekdb-fts-scored-e91a37e3",
+          "binary_sha256": "e9c28137b1469eba0372eee350c6952c6e2403c96a8b2c3b8e439780522b476c",
+          "dirty_paths": [],
+          "benchmark_sha256": {
+            "fts_large_bench.sh": "596ea5d1c0038e666b78aa94bef22d2dfb87ffc9e84dbc7e2a1da1f746424462",
+            "fts_large_bench_baseline.json": "f4e97eddb2e49c982b967fc8047f7cf37177eebe53d648f6746d85aacda91f0c",
+            "fts_large_bench_gen.py": "b0c816dd8211ac0471f60b72a37a3fb5c62580357a5b6d7ac95f5a8c2e3f143d",
+            "fts_large_bench_score.py": "bea52eb1c68d05693bb3ac5b910ab0e2fa0e70e01582f40466898ee1e2e3ef55",
+            "fts_large_bench_setup.sql": "311826751df7f51ac45156fb4284aeca9bd9197370aceb88f4fb92832b458108"
+          },
+          "server_command": [
+            "/home/ganzw/oceanbase/.tooling/seekdb-fts-scored-e91a37e3",
+            "--nodaemon",
+            "--base-dir",
+            "/home/ganzw/oceanbase/.tooling/seekdb-fts-instance-20261026T133246780812Z",
+            "--port",
+            "12882",
+            "--log-level",
+            "INFO",
+            "--parameter",
+            "memory_budget=8G",
+            "--parameter",
+            "cpu_count=4",
+            "--parameter",
+            "datafile_size=4G",
+            "--parameter",
+            "datafile_maxsize=8G",
+            "--parameter",
+            "log_disk_size=4G"
+          ],
+          "instance": "/home/ganzw/oceanbase/.tooling/seekdb-fts-instance-20261026T133246780812Z",
+          "logs": "/home/ganzw/oceanbase/run-logs/seekdb-fts-round2-affinity-before-20261026T133246780812Z",
+          "parameters": {
+            "memory_budget": "8G",
+            "cpu_count": "4",
+            "datafile_size": "4G",
+            "datafile_maxsize": "8G",
+            "log_disk_size": "4G"
+          },
+          "cpu_affinity": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "cases": [],
+          "benchmarks": [
+            {
+              "repeat": 1,
+              "report": "/home/ganzw/oceanbase/run-logs/seekdb-fts-round2-affinity-before-20261026T133246780812Z/report-1.txt",
+              "exit_code": 0,
+              "elapsed_sec": 44.16007052100031
+            },
+            {
+              "repeat": 2,
+              "report": "/home/ganzw/oceanbase/run-logs/seekdb-fts-round2-affinity-before-20261026T133246780812Z/report-2.txt",
+              "exit_code": 0,
+              "elapsed_sec": 44.45485152496258
+            },
+            {
+              "repeat": 3,
+              "report": "/home/ganzw/oceanbase/run-logs/seekdb-fts-round2-affinity-before-20261026T133246780812Z/report-3.txt",
+              "exit_code": 0,
+              "elapsed_sec": 46.01104685396422
+            }
+          ],
+          "server_pid": 1422750,
+          "server_exit_code": -9,
+          "exit_code": 0
+        },
+        "reports": [
+          {
+            "git_dirty": 0.0,
+            "rows": 20000.0,
+            "batch": 500.0,
+            "rounds": 3000.0,
+            "query_rounds": 200.0,
+            "samples": 3.0,
+            "warmup": 30.0,
+            "skip_load": 0.0,
+            "select1_avg_ms": 0.1012,
+            "select1_stdev_ms": 0.0186,
+            "raw_load_sec": 0.894,
+            "raw_load_rows_per_sec": 22371.4,
+            "build_ik_all_sec": 12.949,
+            "build_ik_content_sec": 9.82,
+            "build_beng_en_sec": 4.986,
+            "build_total_sec": 27.787,
+            "tokenize_ik_avg_ms": 0.2436,
+            "tokenize_ik_median_ms": 0.2447,
+            "tokenize_ik_stdev_ms": 0.016,
+            "tokenize_beng_avg_ms": 0.162,
+            "tokenize_beng_median_ms": 0.1481,
+            "tokenize_beng_stdev_ms": 0.0235,
+            "query_cn_hits": 8001.0,
+            "query_cn_avg_ms": 3.231,
+            "query_cn_stdev_ms": 0.0519,
+            "query_beng_hits": 11000.0,
+            "query_beng_avg_ms": 4.4605,
+            "query_beng_stdev_ms": 0.1047,
+            "query_mixed_hits": 7332.0,
+            "query_mixed_avg_ms": 3.261,
+            "query_mixed_stdev_ms": 0.0278,
+            "query_limit_hits": 20.0,
+            "query_limit_avg_ms": 3.6922,
+            "query_limit_stdev_ms": 0.0682
+          },
+          {
+            "git_dirty": 0.0,
+            "rows": 20000.0,
+            "batch": 500.0,
+            "rounds": 3000.0,
+            "query_rounds": 200.0,
+            "samples": 3.0,
+            "warmup": 30.0,
+            "skip_load": 0.0,
+            "select1_avg_ms": 0.1103,
+            "select1_stdev_ms": 0.0028,
+            "raw_load_sec": 0.848,
+            "raw_load_rows_per_sec": 23584.9,
+            "build_ik_all_sec": 12.725,
+            "build_ik_content_sec": 10.013,
+            "build_beng_en_sec": 5.2,
+            "build_total_sec": 27.97,
+            "tokenize_ik_avg_ms": 0.2356,
+            "tokenize_ik_median_ms": 0.2176,
+            "tokenize_ik_stdev_ms": 0.0338,
+            "tokenize_beng_avg_ms": 0.1694,
+            "tokenize_beng_median_ms": 0.169,
+            "tokenize_beng_stdev_ms": 0.005,
+            "query_cn_hits": 8001.0,
+            "query_cn_avg_ms": 3.048,
+            "query_cn_stdev_ms": 0.0099,
+            "query_beng_hits": 11000.0,
+            "query_beng_avg_ms": 4.4365,
+            "query_beng_stdev_ms": 0.0895,
+            "query_mixed_hits": 7332.0,
+            "query_mixed_avg_ms": 3.3601,
+            "query_mixed_stdev_ms": 0.0346,
+            "query_limit_hits": 20.0,
+            "query_limit_avg_ms": 3.8072,
+            "query_limit_stdev_ms": 0.0637
+          },
+          {
+            "git_dirty": 0.0,
+            "rows": 20000.0,
+            "batch": 500.0,
+            "rounds": 3000.0,
+            "query_rounds": 200.0,
+            "samples": 3.0,
+            "warmup": 30.0,
+            "skip_load": 0.0,
+            "select1_avg_ms": 0.1005,
+            "select1_stdev_ms": 0.0035,
+            "raw_load_sec": 0.91,
+            "raw_load_rows_per_sec": 21978.0,
+            "build_ik_all_sec": 12.44,
+            "build_ik_content_sec": 9.93,
+            "build_beng_en_sec": 5.006,
+            "build_total_sec": 27.41,
+            "tokenize_ik_avg_ms": 0.3252,
+            "tokenize_ik_median_ms": 0.3519,
+            "tokenize_ik_stdev_ms": 0.0539,
+            "tokenize_beng_avg_ms": 0.3091,
+            "tokenize_beng_median_ms": 0.3186,
+            "tokenize_beng_stdev_ms": 0.0471,
+            "query_cn_hits": 8001.0,
+            "query_cn_avg_ms": 3.0272,
+            "query_cn_stdev_ms": 0.0394,
+            "query_beng_hits": 11000.0,
+            "query_beng_avg_ms": 4.5901,
+            "query_beng_stdev_ms": 0.1438,
+            "query_mixed_hits": 7332.0,
+            "query_mixed_avg_ms": 3.4019,
+            "query_mixed_stdev_ms": 0.1668,
+            "query_limit_hits": 20.0,
+            "query_limit_avg_ms": 3.7112,
+            "query_limit_stdev_ms": 0.0396
+          }
+        ]
+      },
+      "after": {
+        "metadata": {
+          "label": "round2-final-after",
+          "source_commit": "79f77cbb24fd7aa7627c37f7716dc9202cd11686",
+          "binary_commit": "79f77cbb24fd7aa7627c37f7716dc9202cd11686",
+          "binary": "/home/ganzw/oceanbase/seekdb/build_release/src/observer/seekdb",
+          "binary_sha256": "a1e3dab45a219796bda85041579e202d1e82bf52269e3cfb4d9b60f4bb3697dc",
+          "dirty_paths": [],
+          "benchmark_sha256": {
+            "fts_large_bench.sh": "596ea5d1c0038e666b78aa94bef22d2dfb87ffc9e84dbc7e2a1da1f746424462",
+            "fts_large_bench_baseline.json": "f4e97eddb2e49c982b967fc8047f7cf37177eebe53d648f6746d85aacda91f0c",
+            "fts_large_bench_gen.py": "b0c816dd8211ac0471f60b72a37a3fb5c62580357a5b6d7ac95f5a8c2e3f143d",
+            "fts_large_bench_score.py": "bea52eb1c68d05693bb3ac5b910ab0e2fa0e70e01582f40466898ee1e2e3ef55",
+            "fts_large_bench_setup.sql": "311826751df7f51ac45156fb4284aeca9bd9197370aceb88f4fb92832b458108"
+          },
+          "server_command": [
+            "/home/ganzw/oceanbase/seekdb/build_release/src/observer/seekdb",
+            "--nodaemon",
+            "--base-dir",
+            "/home/ganzw/oceanbase/.tooling/seekdb-fts-instance-20261026T135211931654Z",
+            "--port",
+            "12882",
+            "--log-level",
+            "INFO",
+            "--parameter",
+            "memory_budget=8G",
+            "--parameter",
+            "cpu_count=4",
+            "--parameter",
+            "datafile_size=4G",
+            "--parameter",
+            "datafile_maxsize=8G",
+            "--parameter",
+            "log_disk_size=4G"
+          ],
+          "instance": "/home/ganzw/oceanbase/.tooling/seekdb-fts-instance-20261026T135211931654Z",
+          "logs": "/home/ganzw/oceanbase/run-logs/seekdb-fts-round2-final-after-20261026T135211931654Z",
+          "parameters": {
+            "memory_budget": "8G",
+            "cpu_count": "4",
+            "datafile_size": "4G",
+            "datafile_maxsize": "8G",
+            "log_disk_size": "4G"
+          },
+          "cpu_affinity": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "cases": [],
+          "benchmarks": [
+            {
+              "repeat": 1,
+              "report": "/home/ganzw/oceanbase/run-logs/seekdb-fts-round2-final-after-20261026T135211931654Z/report-1.txt",
+              "exit_code": 0,
+              "elapsed_sec": 54.07007521297783
+            },
+            {
+              "repeat": 2,
+              "report": "/home/ganzw/oceanbase/run-logs/seekdb-fts-round2-final-after-20261026T135211931654Z/report-2.txt",
+              "exit_code": 0,
+              "elapsed_sec": 50.910411996999756
+            },
+            {
+              "repeat": 3,
+              "report": "/home/ganzw/oceanbase/run-logs/seekdb-fts-round2-final-after-20261026T135211931654Z/report-3.txt",
+              "exit_code": 0,
+              "elapsed_sec": 52.75911663699662
+            }
+          ],
+          "server_pid": 1502212,
+          "server_exit_code": -9,
+          "exit_code": 0
+        },
+        "reports": [
+          {
+            "git_dirty": 0.0,
+            "rows": 20000.0,
+            "batch": 500.0,
+            "rounds": 3000.0,
+            "query_rounds": 200.0,
+            "samples": 3.0,
+            "warmup": 30.0,
+            "skip_load": 0.0,
+            "select1_avg_ms": 0.1477,
+            "select1_stdev_ms": 0.0269,
+            "raw_load_sec": 0.754,
+            "raw_load_rows_per_sec": 26525.2,
+            "build_ik_all_sec": 15.104,
+            "build_ik_content_sec": 10.238,
+            "build_beng_en_sec": 5.307,
+            "build_total_sec": 30.681,
+            "tokenize_ik_avg_ms": 0.7085,
+            "tokenize_ik_median_ms": 0.704,
+            "tokenize_ik_stdev_ms": 0.0306,
+            "tokenize_beng_avg_ms": 0.4699,
+            "tokenize_beng_median_ms": 0.4688,
+            "tokenize_beng_stdev_ms": 0.0056,
+            "query_cn_hits": 8001.0,
+            "query_cn_avg_ms": 2.6826,
+            "query_cn_stdev_ms": 0.141,
+            "query_beng_hits": 11000.0,
+            "query_beng_avg_ms": 3.8582,
+            "query_beng_stdev_ms": 0.1715,
+            "query_mixed_hits": 7332.0,
+            "query_mixed_avg_ms": 3.1118,
+            "query_mixed_stdev_ms": 0.1475,
+            "query_limit_hits": 20.0,
+            "query_limit_avg_ms": 4.4376,
+            "query_limit_stdev_ms": 0.1062
+          },
+          {
+            "git_dirty": 0.0,
+            "rows": 20000.0,
+            "batch": 500.0,
+            "rounds": 3000.0,
+            "query_rounds": 200.0,
+            "samples": 3.0,
+            "warmup": 30.0,
+            "skip_load": 0.0,
+            "select1_avg_ms": 0.1847,
+            "select1_stdev_ms": 0.0327,
+            "raw_load_sec": 0.731,
+            "raw_load_rows_per_sec": 27359.8,
+            "build_ik_all_sec": 12.869,
+            "build_ik_content_sec": 10.553,
+            "build_beng_en_sec": 5.423,
+            "build_total_sec": 28.881,
+            "tokenize_ik_avg_ms": 0.618,
+            "tokenize_ik_median_ms": 0.6632,
+            "tokenize_ik_stdev_ms": 0.0738,
+            "tokenize_beng_avg_ms": 0.3797,
+            "tokenize_beng_median_ms": 0.4486,
+            "tokenize_beng_stdev_ms": 0.1251,
+            "query_cn_hits": 8001.0,
+            "query_cn_avg_ms": 2.6903,
+            "query_cn_stdev_ms": 0.0806,
+            "query_beng_hits": 11000.0,
+            "query_beng_avg_ms": 3.792,
+            "query_beng_stdev_ms": 0.165,
+            "query_mixed_hits": 7332.0,
+            "query_mixed_avg_ms": 3.0332,
+            "query_mixed_stdev_ms": 0.128,
+            "query_limit_hits": 20.0,
+            "query_limit_avg_ms": 4.4749,
+            "query_limit_stdev_ms": 0.1339
+          },
+          {
+            "git_dirty": 0.0,
+            "rows": 20000.0,
+            "batch": 500.0,
+            "rounds": 3000.0,
+            "query_rounds": 200.0,
+            "samples": 3.0,
+            "warmup": 30.0,
+            "skip_load": 0.0,
+            "select1_avg_ms": 0.1782,
+            "select1_stdev_ms": 0.0174,
+            "raw_load_sec": 0.948,
+            "raw_load_rows_per_sec": 21097.0,
+            "build_ik_all_sec": 12.67,
+            "build_ik_content_sec": 9.956,
+            "build_beng_en_sec": 6.426,
+            "build_total_sec": 29.088,
+            "tokenize_ik_avg_ms": 0.7018,
+            "tokenize_ik_median_ms": 0.7819,
+            "tokenize_ik_stdev_ms": 0.1236,
+            "tokenize_beng_avg_ms": 0.4549,
+            "tokenize_beng_median_ms": 0.4784,
+            "tokenize_beng_stdev_ms": 0.0343,
+            "query_cn_hits": 8001.0,
+            "query_cn_avg_ms": 2.7292,
+            "query_cn_stdev_ms": 0.0897,
+            "query_beng_hits": 11000.0,
+            "query_beng_avg_ms": 3.7963,
+            "query_beng_stdev_ms": 0.0092,
+            "query_mixed_hits": 7332.0,
+            "query_mixed_avg_ms": 2.9947,
+            "query_mixed_stdev_ms": 0.1264,
+            "query_limit_hits": 20.0,
+            "query_limit_avg_ms": 4.4282,
+            "query_limit_stdev_ms": 0.174
+          }
+        ]
+      }
+    },
+    "query_hits": {
+      "query_cn_hits": 8001.0,
+      "query_beng_hits": 11000.0,
+      "query_mixed_hits": 7332.0,
+      "query_limit_hits": 20.0
+    },
+    "categories": {
+      "build": {
+        "metrics": [
+          {
+            "metric": "build_ik_all_sec",
+            "before": [
+              12.949,
+              12.725,
+              12.44
+            ],
+            "after": [
+              15.104,
+              12.869,
+              12.67
+            ],
+            "before_mean": 12.704666666666666,
+            "after_mean": 13.547666666666666,
+            "before_median": 12.725,
+            "after_median": 12.869,
+            "time_reduction": -0.06635357086634833
+          },
+          {
+            "metric": "build_ik_content_sec",
+            "before": [
+              9.82,
+              10.013,
+              9.93
+            ],
+            "after": [
+              10.238,
+              10.553,
+              9.956
+            ],
+            "before_mean": 9.921,
+            "after_mean": 10.249,
+            "before_median": 9.93,
+            "after_median": 10.238,
+            "time_reduction": -0.0330611833484529
+          },
+          {
+            "metric": "build_beng_en_sec",
+            "before": [
+              4.986,
+              5.2,
+              5.006
+            ],
+            "after": [
+              5.307,
+              5.423,
+              6.426
+            ],
+            "before_mean": 5.064,
+            "after_mean": 5.718666666666667,
+            "before_median": 5.006,
+            "after_median": 5.423,
+            "time_reduction": -0.12927856766719323
+          }
+        ],
+        "time_reduction": -0.07623110729399815
+      },
+      "tokenize": {
+        "metrics": [
+          {
+            "metric": "tokenize_ik_avg_ms",
+            "before": [
+              0.2436,
+              0.2356,
+              0.3252
+            ],
+            "after": [
+              0.7085,
+              0.618,
+              0.7018
+            ],
+            "before_mean": 0.26813333333333333,
+            "after_mean": 0.6761,
+            "before_median": 0.2436,
+            "after_median": 0.7018,
+            "time_reduction": -1.5215067130780708
+          },
+          {
+            "metric": "tokenize_beng_avg_ms",
+            "before": [
+              0.162,
+              0.1694,
+              0.3091
+            ],
+            "after": [
+              0.4699,
+              0.3797,
+              0.4549
+            ],
+            "before_mean": 0.2135,
+            "after_mean": 0.43483333333333335,
+            "before_median": 0.1694,
+            "after_median": 0.4549,
+            "time_reduction": -1.0366900858704138
+          }
+        ],
+        "time_reduction": -1.2790983994742424
+      },
+      "query": {
+        "metrics": [
+          {
+            "metric": "query_cn_avg_ms",
+            "before": [
+              3.231,
+              3.048,
+              3.0272
+            ],
+            "after": [
+              2.6826,
+              2.6903,
+              2.7292
+            ],
+            "before_mean": 3.1020666666666665,
+            "after_mean": 2.7007,
+            "before_median": 3.048,
+            "after_median": 2.6903,
+            "time_reduction": 0.1293868603726548
+          },
+          {
+            "metric": "query_beng_avg_ms",
+            "before": [
+              4.4605,
+              4.4365,
+              4.5901
+            ],
+            "after": [
+              3.8582,
+              3.792,
+              3.7963
+            ],
+            "before_mean": 4.495699999999999,
+            "after_mean": 3.8155,
+            "before_median": 4.4605,
+            "after_median": 3.7963,
+            "time_reduction": 0.15130013123651476
+          },
+          {
+            "metric": "query_mixed_avg_ms",
+            "before": [
+              3.261,
+              3.3601,
+              3.4019
+            ],
+            "after": [
+              3.1118,
+              3.0332,
+              2.9947
+            ],
+            "before_mean": 3.341,
+            "after_mean": 3.0465666666666666,
+            "before_median": 3.3601,
+            "after_median": 3.0332,
+            "time_reduction": 0.08812730719345511
+          },
+          {
+            "metric": "query_limit_avg_ms",
+            "before": [
+              3.6922,
+              3.8072,
+              3.7112
+            ],
+            "after": [
+              4.4376,
+              4.4749,
+              4.4282
+            ],
+            "before_mean": 3.736866666666667,
+            "after_mean": 4.4469,
+            "before_median": 3.7112,
+            "after_median": 4.4376,
+            "time_reduction": -0.19000767131108062
+          }
+        ],
+        "time_reduction": 0.044701656872886006
+      }
+    },
+    "mean_category_time_reduction": -0.4368759499651182,
+    "note": "Same-host comparison; not an official competition score. Original benchmark assets are unchanged."
+  },
+  "reverse_comparison": {
+    "runs": {
+      "before": {
+        "metadata": {
+          "label": "round2-final-old-recheck",
+          "source_commit": "79f77cbb24fd7aa7627c37f7716dc9202cd11686",
+          "binary_commit": "e91a37e3cac0f92a329d40a2dc7b715ebf510e40",
+          "binary": "/home/ganzw/oceanbase/.tooling/seekdb-fts-scored-e91a37e3",
+          "binary_sha256": "e9c28137b1469eba0372eee350c6952c6e2403c96a8b2c3b8e439780522b476c",
+          "dirty_paths": [],
+          "benchmark_sha256": {
+            "fts_large_bench.sh": "596ea5d1c0038e666b78aa94bef22d2dfb87ffc9e84dbc7e2a1da1f746424462",
+            "fts_large_bench_baseline.json": "f4e97eddb2e49c982b967fc8047f7cf37177eebe53d648f6746d85aacda91f0c",
+            "fts_large_bench_gen.py": "b0c816dd8211ac0471f60b72a37a3fb5c62580357a5b6d7ac95f5a8c2e3f143d",
+            "fts_large_bench_score.py": "bea52eb1c68d05693bb3ac5b910ab0e2fa0e70e01582f40466898ee1e2e3ef55",
+            "fts_large_bench_setup.sql": "311826751df7f51ac45156fb4284aeca9bd9197370aceb88f4fb92832b458108"
+          },
+          "server_command": [
+            "/home/ganzw/oceanbase/.tooling/seekdb-fts-scored-e91a37e3",
+            "--nodaemon",
+            "--base-dir",
+            "/home/ganzw/oceanbase/.tooling/seekdb-fts-instance-20261026T135503821552Z",
+            "--port",
+            "12882",
+            "--log-level",
+            "INFO",
+            "--parameter",
+            "memory_budget=8G",
+            "--parameter",
+            "cpu_count=4",
+            "--parameter",
+            "datafile_size=4G",
+            "--parameter",
+            "datafile_maxsize=8G",
+            "--parameter",
+            "log_disk_size=4G"
+          ],
+          "instance": "/home/ganzw/oceanbase/.tooling/seekdb-fts-instance-20261026T135503821552Z",
+          "logs": "/home/ganzw/oceanbase/run-logs/seekdb-fts-round2-final-old-recheck-20261026T135503821552Z",
+          "parameters": {
+            "memory_budget": "8G",
+            "cpu_count": "4",
+            "datafile_size": "4G",
+            "datafile_maxsize": "8G",
+            "log_disk_size": "4G"
+          },
+          "cpu_affinity": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "cases": [],
+          "benchmarks": [
+            {
+              "repeat": 1,
+              "report": "/home/ganzw/oceanbase/run-logs/seekdb-fts-round2-final-old-recheck-20261026T135503821552Z/report-1.txt",
+              "exit_code": 0,
+              "elapsed_sec": 56.32650970999384
+            },
+            {
+              "repeat": 2,
+              "report": "/home/ganzw/oceanbase/run-logs/seekdb-fts-round2-final-old-recheck-20261026T135503821552Z/report-2.txt",
+              "exit_code": 0,
+              "elapsed_sec": 51.90094408299774
+            },
+            {
+              "repeat": 3,
+              "report": "/home/ganzw/oceanbase/run-logs/seekdb-fts-round2-final-old-recheck-20261026T135503821552Z/report-3.txt",
+              "exit_code": 0,
+              "elapsed_sec": 46.17730841698358
+            }
+          ],
+          "server_pid": 1513941,
+          "server_exit_code": -9,
+          "exit_code": 0
+        },
+        "reports": [
+          {
+            "git_dirty": 0.0,
+            "rows": 20000.0,
+            "batch": 500.0,
+            "rounds": 3000.0,
+            "query_rounds": 200.0,
+            "samples": 3.0,
+            "warmup": 30.0,
+            "skip_load": 0.0,
+            "select1_avg_ms": 0.1561,
+            "select1_stdev_ms": 0.0067,
+            "raw_load_sec": 0.853,
+            "raw_load_rows_per_sec": 23446.7,
+            "build_ik_all_sec": 15.228,
+            "build_ik_content_sec": 10.354,
+            "build_beng_en_sec": 5.32,
+            "build_total_sec": 30.939,
+            "tokenize_ik_avg_ms": 0.7381,
+            "tokenize_ik_median_ms": 0.7307,
+            "tokenize_ik_stdev_ms": 0.0633,
+            "tokenize_beng_avg_ms": 0.4215,
+            "tokenize_beng_median_ms": 0.4095,
+            "tokenize_beng_stdev_ms": 0.0209,
+            "query_cn_hits": 8001.0,
+            "query_cn_avg_ms": 3.8352,
+            "query_cn_stdev_ms": 0.1397,
+            "query_beng_hits": 11000.0,
+            "query_beng_avg_ms": 4.8158,
+            "query_beng_stdev_ms": 0.5996,
+            "query_mixed_hits": 7332.0,
+            "query_mixed_avg_ms": 4.0754,
+            "query_mixed_stdev_ms": 0.1537,
+            "query_limit_hits": 20.0,
+            "query_limit_avg_ms": 4.4423,
+            "query_limit_stdev_ms": 0.1873
+          },
+          {
+            "git_dirty": 0.0,
+            "rows": 20000.0,
+            "batch": 500.0,
+            "rounds": 3000.0,
+            "query_rounds": 200.0,
+            "samples": 3.0,
+            "warmup": 30.0,
+            "skip_load": 0.0,
+            "select1_avg_ms": 0.1843,
+            "select1_stdev_ms": 0.0132,
+            "raw_load_sec": 0.857,
+            "raw_load_rows_per_sec": 23337.2,
+            "build_ik_all_sec": 12.961,
+            "build_ik_content_sec": 10.354,
+            "build_beng_en_sec": 5.321,
+            "build_total_sec": 28.671,
+            "tokenize_ik_avg_ms": 0.6454,
+            "tokenize_ik_median_ms": 0.6469,
+            "tokenize_ik_stdev_ms": 0.0178,
+            "tokenize_beng_avg_ms": 0.3665,
+            "tokenize_beng_median_ms": 0.369,
+            "tokenize_beng_stdev_ms": 0.0668,
+            "query_cn_hits": 8001.0,
+            "query_cn_avg_ms": 3.4305,
+            "query_cn_stdev_ms": 0.1667,
+            "query_beng_hits": 11000.0,
+            "query_beng_avg_ms": 4.6993,
+            "query_beng_stdev_ms": 0.2983,
+            "query_mixed_hits": 7332.0,
+            "query_mixed_avg_ms": 3.2935,
+            "query_mixed_stdev_ms": 0.0327,
+            "query_limit_hits": 20.0,
+            "query_limit_avg_ms": 4.0966,
+            "query_limit_stdev_ms": 0.4579
+          },
+          {
+            "git_dirty": 0.0,
+            "rows": 20000.0,
+            "batch": 500.0,
+            "rounds": 3000.0,
+            "query_rounds": 200.0,
+            "samples": 3.0,
+            "warmup": 30.0,
+            "skip_load": 0.0,
+            "select1_avg_ms": 0.163,
+            "select1_stdev_ms": 0.0387,
+            "raw_load_sec": 0.866,
+            "raw_load_rows_per_sec": 23094.7,
+            "build_ik_all_sec": 12.246,
+            "build_ik_content_sec": 9.729,
+            "build_beng_en_sec": 5.203,
+            "build_total_sec": 27.212,
+            "tokenize_ik_avg_ms": 0.2564,
+            "tokenize_ik_median_ms": 0.2112,
+            "tokenize_ik_stdev_ms": 0.0686,
+            "tokenize_beng_avg_ms": 0.2094,
+            "tokenize_beng_median_ms": 0.2024,
+            "tokenize_beng_stdev_ms": 0.0171,
+            "query_cn_hits": 8001.0,
+            "query_cn_avg_ms": 3.5797,
+            "query_cn_stdev_ms": 0.2208,
+            "query_beng_hits": 11000.0,
+            "query_beng_avg_ms": 4.9945,
+            "query_beng_stdev_ms": 0.214,
+            "query_mixed_hits": 7332.0,
+            "query_mixed_avg_ms": 3.9709,
+            "query_mixed_stdev_ms": 0.1287,
+            "query_limit_hits": 20.0,
+            "query_limit_avg_ms": 4.3493,
+            "query_limit_stdev_ms": 0.0439
+          }
+        ]
+      },
+      "after": {
+        "metadata": {
+          "label": "round2-final-after",
+          "source_commit": "79f77cbb24fd7aa7627c37f7716dc9202cd11686",
+          "binary_commit": "79f77cbb24fd7aa7627c37f7716dc9202cd11686",
+          "binary": "/home/ganzw/oceanbase/seekdb/build_release/src/observer/seekdb",
+          "binary_sha256": "a1e3dab45a219796bda85041579e202d1e82bf52269e3cfb4d9b60f4bb3697dc",
+          "dirty_paths": [],
+          "benchmark_sha256": {
+            "fts_large_bench.sh": "596ea5d1c0038e666b78aa94bef22d2dfb87ffc9e84dbc7e2a1da1f746424462",
+            "fts_large_bench_baseline.json": "f4e97eddb2e49c982b967fc8047f7cf37177eebe53d648f6746d85aacda91f0c",
+            "fts_large_bench_gen.py": "b0c816dd8211ac0471f60b72a37a3fb5c62580357a5b6d7ac95f5a8c2e3f143d",
+            "fts_large_bench_score.py": "bea52eb1c68d05693bb3ac5b910ab0e2fa0e70e01582f40466898ee1e2e3ef55",
+            "fts_large_bench_setup.sql": "311826751df7f51ac45156fb4284aeca9bd9197370aceb88f4fb92832b458108"
+          },
+          "server_command": [
+            "/home/ganzw/oceanbase/seekdb/build_release/src/observer/seekdb",
+            "--nodaemon",
+            "--base-dir",
+            "/home/ganzw/oceanbase/.tooling/seekdb-fts-instance-20261026T135211931654Z",
+            "--port",
+            "12882",
+            "--log-level",
+            "INFO",
+            "--parameter",
+            "memory_budget=8G",
+            "--parameter",
+            "cpu_count=4",
+            "--parameter",
+            "datafile_size=4G",
+            "--parameter",
+            "datafile_maxsize=8G",
+            "--parameter",
+            "log_disk_size=4G"
+          ],
+          "instance": "/home/ganzw/oceanbase/.tooling/seekdb-fts-instance-20261026T135211931654Z",
+          "logs": "/home/ganzw/oceanbase/run-logs/seekdb-fts-round2-final-after-20261026T135211931654Z",
+          "parameters": {
+            "memory_budget": "8G",
+            "cpu_count": "4",
+            "datafile_size": "4G",
+            "datafile_maxsize": "8G",
+            "log_disk_size": "4G"
+          },
+          "cpu_affinity": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "cases": [],
+          "benchmarks": [
+            {
+              "repeat": 1,
+              "report": "/home/ganzw/oceanbase/run-logs/seekdb-fts-round2-final-after-20261026T135211931654Z/report-1.txt",
+              "exit_code": 0,
+              "elapsed_sec": 54.07007521297783
+            },
+            {
+              "repeat": 2,
+              "report": "/home/ganzw/oceanbase/run-logs/seekdb-fts-round2-final-after-20261026T135211931654Z/report-2.txt",
+              "exit_code": 0,
+              "elapsed_sec": 50.910411996999756
+            },
+            {
+              "repeat": 3,
+              "report": "/home/ganzw/oceanbase/run-logs/seekdb-fts-round2-final-after-20261026T135211931654Z/report-3.txt",
+              "exit_code": 0,
+              "elapsed_sec": 52.75911663699662
+            }
+          ],
+          "server_pid": 1502212,
+          "server_exit_code": -9,
+          "exit_code": 0
+        },
+        "reports": [
+          {
+            "git_dirty": 0.0,
+            "rows": 20000.0,
+            "batch": 500.0,
+            "rounds": 3000.0,
+            "query_rounds": 200.0,
+            "samples": 3.0,
+            "warmup": 30.0,
+            "skip_load": 0.0,
+            "select1_avg_ms": 0.1477,
+            "select1_stdev_ms": 0.0269,
+            "raw_load_sec": 0.754,
+            "raw_load_rows_per_sec": 26525.2,
+            "build_ik_all_sec": 15.104,
+            "build_ik_content_sec": 10.238,
+            "build_beng_en_sec": 5.307,
+            "build_total_sec": 30.681,
+            "tokenize_ik_avg_ms": 0.7085,
+            "tokenize_ik_median_ms": 0.704,
+            "tokenize_ik_stdev_ms": 0.0306,
+            "tokenize_beng_avg_ms": 0.4699,
+            "tokenize_beng_median_ms": 0.4688,
+            "tokenize_beng_stdev_ms": 0.0056,
+            "query_cn_hits": 8001.0,
+            "query_cn_avg_ms": 2.6826,
+            "query_cn_stdev_ms": 0.141,
+            "query_beng_hits": 11000.0,
+            "query_beng_avg_ms": 3.8582,
+            "query_beng_stdev_ms": 0.1715,
+            "query_mixed_hits": 7332.0,
+            "query_mixed_avg_ms": 3.1118,
+            "query_mixed_stdev_ms": 0.1475,
+            "query_limit_hits": 20.0,
+            "query_limit_avg_ms": 4.4376,
+            "query_limit_stdev_ms": 0.1062
+          },
+          {
+            "git_dirty": 0.0,
+            "rows": 20000.0,
+            "batch": 500.0,
+            "rounds": 3000.0,
+            "query_rounds": 200.0,
+            "samples": 3.0,
+            "warmup": 30.0,
+            "skip_load": 0.0,
+            "select1_avg_ms": 0.1847,
+            "select1_stdev_ms": 0.0327,
+            "raw_load_sec": 0.731,
+            "raw_load_rows_per_sec": 27359.8,
+            "build_ik_all_sec": 12.869,
+            "build_ik_content_sec": 10.553,
+            "build_beng_en_sec": 5.423,
+            "build_total_sec": 28.881,
+            "tokenize_ik_avg_ms": 0.618,
+            "tokenize_ik_median_ms": 0.6632,
+            "tokenize_ik_stdev_ms": 0.0738,
+            "tokenize_beng_avg_ms": 0.3797,
+            "tokenize_beng_median_ms": 0.4486,
+            "tokenize_beng_stdev_ms": 0.1251,
+            "query_cn_hits": 8001.0,
+            "query_cn_avg_ms": 2.6903,
+            "query_cn_stdev_ms": 0.0806,
+            "query_beng_hits": 11000.0,
+            "query_beng_avg_ms": 3.792,
+            "query_beng_stdev_ms": 0.165,
+            "query_mixed_hits": 7332.0,
+            "query_mixed_avg_ms": 3.0332,
+            "query_mixed_stdev_ms": 0.128,
+            "query_limit_hits": 20.0,
+            "query_limit_avg_ms": 4.4749,
+            "query_limit_stdev_ms": 0.1339
+          },
+          {
+            "git_dirty": 0.0,
+            "rows": 20000.0,
+            "batch": 500.0,
+            "rounds": 3000.0,
+            "query_rounds": 200.0,
+            "samples": 3.0,
+            "warmup": 30.0,
+            "skip_load": 0.0,
+            "select1_avg_ms": 0.1782,
+            "select1_stdev_ms": 0.0174,
+            "raw_load_sec": 0.948,
+            "raw_load_rows_per_sec": 21097.0,
+            "build_ik_all_sec": 12.67,
+            "build_ik_content_sec": 9.956,
+            "build_beng_en_sec": 6.426,
+            "build_total_sec": 29.088,
+            "tokenize_ik_avg_ms": 0.7018,
+            "tokenize_ik_median_ms": 0.7819,
+            "tokenize_ik_stdev_ms": 0.1236,
+            "tokenize_beng_avg_ms": 0.4549,
+            "tokenize_beng_median_ms": 0.4784,
+            "tokenize_beng_stdev_ms": 0.0343,
+            "query_cn_hits": 8001.0,
+            "query_cn_avg_ms": 2.7292,
+            "query_cn_stdev_ms": 0.0897,
+            "query_beng_hits": 11000.0,
+            "query_beng_avg_ms": 3.7963,
+            "query_beng_stdev_ms": 0.0092,
+            "query_mixed_hits": 7332.0,
+            "query_mixed_avg_ms": 2.9947,
+            "query_mixed_stdev_ms": 0.1264,
+            "query_limit_hits": 20.0,
+            "query_limit_avg_ms": 4.4282,
+            "query_limit_stdev_ms": 0.174
+          }
+        ]
+      }
+    },
+    "query_hits": {
+      "query_cn_hits": 8001.0,
+      "query_beng_hits": 11000.0,
+      "query_mixed_hits": 7332.0,
+      "query_limit_hits": 20.0
+    },
+    "categories": {
+      "build": {
+        "metrics": [
+          {
+            "metric": "build_ik_all_sec",
+            "before": [
+              15.228,
+              12.961,
+              12.246
+            ],
+            "after": [
+              15.104,
+              12.869,
+              12.67
+            ],
+            "before_mean": 13.478333333333333,
+            "after_mean": 13.547666666666666,
+            "before_median": 12.961,
+            "after_median": 12.869,
+            "time_reduction": -0.005144058365277567
+          },
+          {
+            "metric": "build_ik_content_sec",
+            "before": [
+              10.354,
+              10.354,
+              9.729
+            ],
+            "after": [
+              10.238,
+              10.553,
+              9.956
+            ],
+            "before_mean": 10.145666666666665,
+            "after_mean": 10.249,
+            "before_median": 10.354,
+            "after_median": 10.238,
+            "time_reduction": -0.010184972237737159
+          },
+          {
+            "metric": "build_beng_en_sec",
+            "before": [
+              5.32,
+              5.321,
+              5.203
+            ],
+            "after": [
+              5.307,
+              5.423,
+              6.426
+            ],
+            "before_mean": 5.281333333333333,
+            "after_mean": 5.718666666666667,
+            "before_median": 5.32,
+            "after_median": 5.423,
+            "time_reduction": -0.0828073718757889
+          }
+        ],
+        "time_reduction": -0.03271213415960121
+      },
+      "tokenize": {
+        "metrics": [
+          {
+            "metric": "tokenize_ik_avg_ms",
+            "before": [
+              0.7381,
+              0.6454,
+              0.2564
+            ],
+            "after": [
+              0.7085,
+              0.618,
+              0.7018
+            ],
+            "before_mean": 0.5466333333333333,
+            "after_mean": 0.6761,
+            "before_median": 0.6454,
+            "after_median": 0.7018,
+            "time_reduction": -0.23684370998231613
+          },
+          {
+            "metric": "tokenize_beng_avg_ms",
+            "before": [
+              0.4215,
+              0.3665,
+              0.2094
+            ],
+            "after": [
+              0.4699,
+              0.3797,
+              0.4549
+            ],
+            "before_mean": 0.3324666666666667,
+            "after_mean": 0.43483333333333335,
+            "before_median": 0.3665,
+            "after_median": 0.4549,
+            "time_reduction": -0.3079005414076599
+          }
+        ],
+        "time_reduction": -0.27237212569498803
+      },
+      "query": {
+        "metrics": [
+          {
+            "metric": "query_cn_avg_ms",
+            "before": [
+              3.8352,
+              3.4305,
+              3.5797
+            ],
+            "after": [
+              2.6826,
+              2.6903,
+              2.7292
+            ],
+            "before_mean": 3.615133333333333,
+            "after_mean": 2.7007,
+            "before_median": 3.5797,
+            "after_median": 2.6903,
+            "time_reduction": 0.2529459494347834
+          },
+          {
+            "metric": "query_beng_avg_ms",
+            "before": [
+              4.8158,
+              4.6993,
+              4.9945
+            ],
+            "after": [
+              3.8582,
+              3.792,
+              3.7963
+            ],
+            "before_mean": 4.836533333333334,
+            "after_mean": 3.8155,
+            "before_median": 4.8158,
+            "after_median": 3.7963,
+            "time_reduction": 0.21110850747091583
+          },
+          {
+            "metric": "query_mixed_avg_ms",
+            "before": [
+              4.0754,
+              3.2935,
+              3.9709
+            ],
+            "after": [
+              3.1118,
+              3.0332,
+              2.9947
+            ],
+            "before_mean": 3.779933333333333,
+            "after_mean": 3.0465666666666666,
+            "before_median": 3.9709,
+            "after_median": 3.0332,
+            "time_reduction": 0.19401576747385313
+          },
+          {
+            "metric": "query_limit_avg_ms",
+            "before": [
+              4.4423,
+              4.0966,
+              4.3493
+            ],
+            "after": [
+              4.4376,
+              4.4749,
+              4.4282
+            ],
+            "before_mean": 4.2960666666666665,
+            "after_mean": 4.4469,
+            "before_median": 4.3493,
+            "after_median": 4.4376,
+            "time_reduction": -0.03510963517015576
+          }
+        ],
+        "time_reduction": 0.15574014730234914
+      }
+    },
+    "mean_category_time_reduction": -0.0497813708507467,
+    "note": "Same-host comparison; not an official competition score. Original benchmark assets are unchanged."
+  },
+  "correctness": {
+    "product_commit": "79f77cbb24fd7aa7627c37f7716dc9202cd11686",
+    "product_patch_matches_full_regression_snapshot": true,
+    "regression_binary_sha256": "8d8d2e3b1c8c57a4bdb4c682150a0b8002d0304d12fe91b1adc5f744a7455035",
+    "cases": {
+      "basic_dml": 1,
+      "basic_dml_sequel": 0,
+      "cn_word": 0,
+      "collation_hotpath": 0,
+      "create_fts_index_afterward": 0,
+      "create_table_with_fts_index": 0,
+      "domain_id_merge_with_compare_null": 0,
+      "drop_index": 0,
+      "index_view": 0,
+      "load_data": 0,
+      "membership_hotpath": 0,
+      "offline_ddl_with_fts_index": 0,
+      "online_ddl_on_table_with_fts_index": 0,
+      "parser_hotpath": 0,
+      "parser_properties": 0,
+      "partitioned_simple_query": 1,
+      "query_merge_hotpath": 0,
+      "simple_query": 0,
+      "tokenize_function": 0
+    },
+    "passed": 17,
+    "known_upstream_failures": 2,
+    "full_run_exit_code": 2,
+    "full_run": "run-logs/seekdb-fts-round2-merge-regression-20261026T134738081523Z",
+    "basic_dml_failure": "line 1598 stale table ID after drop/recreate, reproduced before optimization",
+    "partitioned_query_failure": "Only two existing EXPLAIN parameter indices :0 versus :1; preserved assertions",
+    "expected_plan_blocks_updated": 8,
+    "oracle_binary_commit": "5bce9e06d1281347ad61344e4b01fab9158c58a2",
+    "new_oracles": [
+      "run-logs/seekdb-fts-membership-before-v2-20261026T124608936816Z",
+      "run-logs/seekdb-fts-collation-before-20261026T125541820453Z"
+    ],
+    "charset_and_tokenizer_identical_to_first_scored_submission": true,
+    "official_benchmark_assets_unchanged": true,
+    "shutdown_validated": false
+  },
+  "clean_release_build": {
+    "command": [
+      "./build.sh",
+      "release",
+      "--make",
+      "-j24"
+    ],
+    "repo": "/home/ganzw/oceanbase/seekdb",
+    "source_commit": "79f77cbb24fd7aa7627c37f7716dc9202cd11686",
+    "dirty_paths_at_start": [],
+    "exit_code": 0,
+    "log": "/home/ganzw/oceanbase/run-logs/seekdb-build-20261026T135147199499Z.log"
+  },
+  "diagnostic_profile": {
+    "method": "Separate process-local SIGPROF PC sampling; approximate query phase inferred from timestamps; excluded from measured runs",
+    "estimated_query_window_samples": 1654,
+    "selected_functions": [
+      {
+        "function": "oceanbase::sql::ObExprBM25::eval_batch_bm25_relevance_expr(oceanbase::sql::ObExpr const&, oceanbase::sql::ObEvalCtx&, oceanbase::sql::ObBitVectorImpl<unsigned long> const&, long)",
+        "samples": 68,
+        "percent": 4.111245465538089
+      },
+      {
+        "function": "oceanbase::storage::ObSimpleRowsMerger<oceanbase::storage::ObSRMergeItem, oceanbase::storage::ObSRMergeCmp>::push(oceanbase::storage::ObSRMergeItem const&)",
+        "samples": 56,
+        "percent": 3.3857315598548974
+      },
+      {
+        "function": "oceanbase::storage::ObSRDaaTIterImpl::filter_on_demand(long, double, bool&)",
+        "samples": 55,
+        "percent": 3.3252720677146312
+      },
+      {
+        "function": "oceanbase::storage::ObSRDaaTIterImpl::collect_dims_by_id(oceanbase::common::ObDatum const*&, double&, bool&)",
+        "samples": 47,
+        "percent": 2.841596130592503
+      },
+      {
+        "function": "oceanbase::storage::ObSRDaaTIterImpl::fill_merge_heap()",
+        "samples": 43,
+        "percent": 2.599758162031439
+      },
+      {
+        "function": "oceanbase::storage::ObSimpleRowsMerger<oceanbase::storage::ObSRMergeItem, oceanbase::storage::ObSRMergeCmp>::top(oceanbase::storage::ObSRMergeItem const*&)",
+        "samples": 22,
+        "percent": 1.3301088270858525
+      },
+      {
+        "function": "oceanbase::storage::ObSimpleRowsMerger<oceanbase::storage::ObSRMergeItem, oceanbase::storage::ObSRMergeCmp>::pop()",
+        "samples": 17,
+        "percent": 1.0278113663845223
+      }
+    ]
+  },
+  "limitations": [
+    "Same saved old binary has substantially different TOKENIZE and SELECT 1 times in the two phases. Both directions, all repetitions and negative reductions are retained.",
+    "Neither SELECT 1 subtraction nor any adjustment of official timing was used.",
+    "Local aggregate changes do not establish the next official competition score.",
+    "CPU affinity is fixed at four physical cores; no cgroup quota or exclusive host reservation was applied.",
+    "The experimental shared string-comparison change was withdrawn; final charset and tokenizer code are byte-identical to the first scored submission.",
+    "Both old and new instances exceeded the SIGTERM deadline and were stopped by the harness. Normal shutdown and restart are not validated.",
+    "Two native suite failures predate the optimization. Only eight EXPLAIN blocks describing the changed score-elision plans were updated; the existing mismatches remain."
+  ],
+  "earlier_diagnostics": {
+    "unaffined_initial_comparison": "run-logs/seekdb-fts-round2-initial-comparison.json; explicitly marked not primary because control latency differed",
+    "rejected_shared_comparison_prototype": "run-logs/seekdb-fts-round2-rejected-prototype-comparison.json; withdrawn before final measurement",
+    "official_benchmark_assets_unmodified_during_all_nine_runs": true
+  }
+}

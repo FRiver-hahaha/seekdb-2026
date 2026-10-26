@@ -1118,7 +1118,20 @@ int ObDASIterUtils::create_text_retrieval_tree(ObTableScanParam &scan_param,
         main_lookup_keep_order = true;
         // TODO: may be optimized to use forward
       }
-      if (table_lookup_ctdef->op_type_ != ObDASOpType::DAS_OP_INDEX_PROJ_LOOKUP) {
+      if (table_lookup_ctdef->op_type_ == ObDASOpType::DAS_OP_TABLE_LOOKUP) {
+        ObDASLocalLookupIter *local_lookup_iter = nullptr;
+        if (OB_FAIL(create_local_lookup_sub_tree(
+            scan_param, alloc,
+            table_lookup_ctdef->get_rowkey_scan_ctdef(),
+            table_lookup_rtdef->get_rowkey_scan_rtdef(),
+            table_lookup_ctdef->get_lookup_scan_ctdef(),
+            table_lookup_rtdef->get_lookup_scan_rtdef(),
+            trans_desc, snapshot, root_iter, related_tablet_ids.lookup_tablet_id_,
+            local_lookup_iter, main_lookup_keep_order))) {
+        } else {
+          root_iter = local_lookup_iter;
+        }
+      } else if (table_lookup_ctdef->op_type_ != ObDASOpType::DAS_OP_INDEX_PROJ_LOOKUP) {
         ret = OB_ERR_UNEXPECTED;
       } else if (OB_FAIL(create_cache_lookup_sub_tree(
           scan_param,
@@ -1496,14 +1509,15 @@ int ObDASIterUtils::create_text_retrieval_sub_tree(
     if (ir_scan_ctdef->has_pushdown_topk() && !has_duplicate_boolean_tokens) {
       merge_iter_param.topk_mode_ = 1;
       merge_iter_param.daat_mode_ = 1;
-    } else if (merge_iter_param.query_tokens_.count() > OB_MAX_TEXT_RETRIEVAL_TOKEN_CNT
-        || (!is_func_lookup && !ir_scan_ctdef->need_proj_relevance_score())) {
+    } else if (merge_iter_param.query_tokens_.count() > OB_MAX_TEXT_RETRIEVAL_TOKEN_CNT) {
       if (BOOLEAN_MODE == ir_scan_ctdef->mode_flag_) {
         ret = OB_NOT_SUPPORTED;
         LOG_USER_ERROR(OB_NOT_SUPPORTED, "Boolean mode with more than 256 tokens is");
       }
       merge_iter_param.taat_mode_ = 1;
     } else {
+      // Keep short ID-only scans streaming in document order too. This also
+      // lets a pushed-down LIMIT stop without materializing every posting.
       merge_iter_param.daat_mode_ = 1;
     }
     if (OB_SUCC(ret) && ir_scan_ctdef->has_pushdown_topk() && has_duplicate_boolean_tokens) {
@@ -1537,7 +1551,8 @@ int ObDASIterUtils::create_text_retrieval_sub_tree(
   }
 
   if (OB_FAIL(ret)) {
-  } else if (size > 0 && !ir_scan_ctdef->need_estimate_total_doc_cnt()) {
+  } else if (size > 0 && ir_scan_ctdef->need_calc_relevance()
+      && !ir_scan_ctdef->need_estimate_total_doc_cnt()) {
     ObDASScanIterParam doc_cnt_agg_param;
     ObDASScanIter *doc_cnt_agg_iter = nullptr;
     init_scan_iter_param(doc_cnt_agg_param, ir_scan_ctdef->get_doc_agg_ctdef(), ir_scan_rtdef);
@@ -1784,8 +1799,10 @@ int ObDASIterUtils::create_domain_lookup_sub_tree(ObTableScanParam &scan_param,
 
   if (OB_ISNULL(table_lookup_ctdef) || OB_ISNULL(table_lookup_rtdef)) {
     ret = OB_INVALID_ARGUMENT;
-  } else if (OB_UNLIKELY(table_lookup_ctdef->op_type_ != ObDASOpType::DAS_OP_INDEX_PROJ_LOOKUP ||
-                         table_lookup_rtdef->op_type_ != ObDASOpType::DAS_OP_INDEX_PROJ_LOOKUP)) {
+  } else if (OB_UNLIKELY(
+      (table_lookup_ctdef->op_type_ != ObDASOpType::DAS_OP_INDEX_PROJ_LOOKUP
+       && table_lookup_ctdef->op_type_ != ObDASOpType::DAS_OP_TABLE_LOOKUP)
+      || table_lookup_rtdef->op_type_ != table_lookup_ctdef->op_type_)) {
     ret = OB_ERR_UNEXPECTED;
   } else if (OB_UNLIKELY(table_lookup_ctdef->get_rowkey_scan_ctdef()->op_type_ != ObDASOpType::DAS_OP_IR_AUX_LOOKUP)) {
     ret = OB_ERR_UNEXPECTED;
