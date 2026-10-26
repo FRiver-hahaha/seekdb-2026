@@ -1,0 +1,16 @@
+# Issue #1477: double negation must preserve the type expected by IFNULL.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x')));
+
+# Controls from the issue.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE 'x'));
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE 'x')));
+
+# Nullable subqueries must still evaluate the second argument correctly.
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(1 LIKE '1')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(1 LIKE 'x')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(NULL LIKE 'x')));
+
+# Exercise simplification in the first argument and longer NOT chains.
+SELECT 1 FROM dual WHERE IFNULL(!(!(1 LIKE 'x')), (SELECT FALSE));
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(!(!(1 LIKE 'x')))));
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(!(1 LIKE 'x'))));
