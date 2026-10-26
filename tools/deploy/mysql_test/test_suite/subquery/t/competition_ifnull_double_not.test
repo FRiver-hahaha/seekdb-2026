@@ -1,0 +1,35 @@
+# Issue #1477. Draft expectations; run on the patched server before release.
+--disable_query_log
+# issue_false_scalar
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x')));
+# control_one_not
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE 'x'));
+# control_literal
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE 'x')));
+# true_scalar
+SELECT 1 FROM dual WHERE IFNULL((SELECT TRUE), !(!(1 LIKE 'x')));
+# null_scalar_false_fallback
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(1 LIKE 'x')));
+# null_scalar_true_fallback
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(1 LIKE '1')));
+# four_not_false_scalar
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), NOT NOT NOT NOT (1 LIKE 'x'));
+# six_not_true_scalar
+SELECT 1 FROM dual WHERE IFNULL((SELECT TRUE), NOT NOT NOT NOT NOT NOT (1 LIKE 'x'));
+# three_not_null_scalar
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), NOT NOT NOT (1 LIKE 'x'));
+# null_predicate
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), NOT NOT (NULL LIKE 'x')) IS NULL;
+# projection_false_scalar
+SELECT IFNULL((SELECT FALSE), !(!(1 LIKE 'x'))) AS v;
+# projection_true_scalar
+SELECT IFNULL((SELECT TRUE), !(!(1 LIKE 'x'))) AS v;
+# projection_null_scalar
+SELECT IFNULL((SELECT NULL), NOT NOT (NULL LIKE 'x')) AS v;
+# comparison_predicate
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), NOT NOT (1 = 1));
+# non_boolean_operand
+SELECT IFNULL((SELECT NULL), NOT NOT 42) AS v;
+# zero_operand
+SELECT IFNULL((SELECT NULL), NOT NOT 0) AS v;
+--enable_query_log
