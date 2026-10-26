@@ -166,6 +166,7 @@ private:
   int push_not(ObIArray<ObRawExpr*> &conditions,
                bool &trans_happened);
   int recursive_push_not(ObRawExpr *&expr,
+                         bool is_predicate,
                          hash::ObHashMap<uint64_t, ObRawExpr *> &push_expr_map,
                          bool &trans_happened);
   int do_push_not(ObRawExpr *&expr,

@@ -2300,7 +2300,7 @@ int ObTransformSimplifyExpr::push_not(ObIArray<ObRawExpr*> &conditions, bool &tr
       ret = OB_ERR_UNEXPECTED;
     } else if (!child_expr->has_flag(CNT_NOT)) {
      //do nothing
-    } else if (OB_FAIL(recursive_push_not(child_expr, push_expr_map, trans_happened))) {
+    } else if (OB_FAIL(recursive_push_not(child_expr, true, push_expr_map, trans_happened))) {
     } else {/*do nothing*/}
   }
   if (OB_SUCC(ret) && trans_happened) {
@@ -2311,23 +2311,38 @@ int ObTransformSimplifyExpr::push_not(ObIArray<ObRawExpr*> &conditions, bool &tr
 }
 
 int ObTransformSimplifyExpr::recursive_push_not(ObRawExpr *&expr,
+                                                bool is_predicate,
                                                 hash::ObHashMap<uint64_t, ObRawExpr *> &push_expr_map,
                                                 bool &trans_happened)
 {
   int ret = OB_SUCCESS;
+  ObRawExpr *original_expr = expr;
   if (OB_ISNULL(expr)) {
     ret = OB_ERR_UNEXPECTED;
   } else if (!expr->has_flag(IS_NOT)) {
     //do nothing
   } else if (OB_FAIL(do_push_not(expr, push_expr_map, trans_happened))) {
+  } else if (!is_predicate &&
+             OB_FAIL(ObTransformUtils::add_cast_for_replace_if_need(*ctx_->expr_factory_,
+                                                                    original_expr,
+                                                                    expr,
+                                                                    ctx_->session_info_))) {
   }
+  // Value consumers depend on the result type; predicates only consume truth/NULL.
+  // Keep predicates unwrapped so range extraction still recognizes LIKE, etc.
   for (int64_t i = 0; OB_SUCC(ret) && i < expr->get_param_count(); i++) {
     ObRawExpr *&child_expr = expr->get_param_expr(i);
+    const ObItemType type = expr->get_expr_type();
+    const bool child_is_predicate = T_OP_AND == type || T_OP_OR == type ||
+                                   T_OP_NOT == type || T_OP_XOR == type || T_OP_BOOL == type;
     if (OB_ISNULL(child_expr)) {
       ret = OB_ERR_UNEXPECTED;
     } else if (!child_expr->has_flag(CNT_NOT)) {
       //do nothing
-    } else if (OB_FAIL(SMART_CALL(recursive_push_not(child_expr, push_expr_map, trans_happened)))) {
+    } else if (OB_FAIL(SMART_CALL(recursive_push_not(child_expr,
+                                                    child_is_predicate,
+                                                    push_expr_map,
+                                                    trans_happened)))) {
     } else {/*do nothing*/}
   }
   return ret;
