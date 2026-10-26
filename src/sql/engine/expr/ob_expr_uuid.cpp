@@ -35,6 +35,8 @@
 #include <linux/if_packet.h>
 #include <fcntl.h>
 #include <unistd.h>
+#else
+#include <openssl/rand.h>
 #endif
 #endif
 #include "sql/engine/expr/ob_expr_uuid.h"
@@ -206,12 +208,13 @@ int ObUUIDNode::init()
   int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
   if (sock == -1) {
     ret = OB_ERR_UNEXPECTED;
-    LOG_ERROR("socket failed", K(ret), K(errno));
+    LOG_WARN("socket failed while obtaining UUID MAC address", K(ret), K(errno));
   } else {
     ifc.ifc_len = sizeof(buf);
     ifc.ifc_buf = buf;
     if (ioctl(sock, SIOCGIFCONF, &ifc) < 0) {
       ret = OB_ERR_UNEXPECTED;
+      LOG_WARN("ioctl failed while enumerating UUID network interfaces, SIOCGIFCONF", K(ret), K(errno));
     } else {
       ifreq *it = ifc.ifc_req;
       ifreq *end = it + (ifc.ifc_len / sizeof(ifreq));
@@ -244,6 +247,19 @@ int ObUUIDNode::init()
       }
     }
     close(sock);
+  }
+  if (!is_inited_) {
+    // RFC 4122 section 4.5 permits a random node when a MAC is unavailable.
+    // This also covers restricted Linux sandboxes denying interface ioctls.
+    if (1 != RAND_bytes(mac_addr_, sizeof(mac_addr_))) {
+      ret = OB_ERR_UNEXPECTED;
+      LOG_WARN("failed to obtain cryptographic randomness for UUID node", K(ret));
+    } else {
+      mac_addr_[0] |= 0x01;  // Distinguish the random node from a hardware MAC.
+      is_inited_ = true;
+      ret = OB_SUCCESS;
+      LOG_INFO("using random UUID node ID because no hardware MAC was available");
+    }
   }
 #endif
   return ret;

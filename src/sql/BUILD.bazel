@@ -185,6 +185,19 @@ cc_library(
 # Private means private to the SQL module, not private to one Unity action.
 # Submodule header owners are visible only through this SQL-internal seam.
 cc_library(
+    name = "uuid_node_unit_test_impl",
+    testonly = True,
+    srcs = ["engine/expr/ob_expr_uuid.cpp"],
+    alwayslink = True,
+    tags = ["manual"],
+    deps = [
+        ":sql_runtime_interface",
+        "//bazel/third_party:libcrypto",
+    ],
+    visibility = ["//unittest/sql/engine/expr:__pkg__"],
+)
+
+cc_library(
     name = "sql_runtime_internal_headers",
     hdrs = glob(
         ["**/*.h", "**/*.ipp", "**/*.def"],
