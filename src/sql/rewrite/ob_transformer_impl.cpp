@@ -486,6 +486,7 @@ int ObTransformerImpl::transform_rule_set_in_one_iteration(ObDMLStmt *&stmt,
     APPLY_RULE_IF_NEEDED(GROUPBY_PULLUP, ObTransformGroupByPullup);
     APPLY_RULE_IF_NEEDED(OR_EXPANSION, ObTransformOrExpansion);
     APPLY_RULE_IF_NEEDED(LATE_MATERIALIZATION, ObTransformLateMaterialization);
+    APPLY_RULE_IF_NEEDED(SIMPLIFY_VEC_FILTER, ObTransformSimplifyVecFilter);
   }
   return ret;
 }
@@ -536,8 +537,13 @@ int ObTransformerImpl::choose_rewrite_rules(ObDMLStmt *stmt, uint64_t &need_type
   } else if (OB_FAIL(check_stmt_functions(stmt, func))) {
   } else if (OB_FAIL(check_temp_table_functions(stmt, func))) {
   } else {
-    if (func.contain_geometry_values_ || func.contain_fulltext_search_ || func.contain_vec_index_approx_) {
+    if (func.contain_geometry_values_ || func.contain_fulltext_search_) {
       disable_list = ObTransformRule::ALL_TRANSFORM_RULES;
+    } else if (func.contain_vec_index_approx_) {
+      disable_list = ObTransformRule::ALL_TRANSFORM_RULES;
+      disable_list &= ~(1ULL << SIMPLIFY_VEC_FILTER);
+    } else {
+      ObTransformRule::add_trans_type(disable_list, SIMPLIFY_VEC_FILTER);
     }
     if (func.contain_enum_set_values_) {
       uint64_t enum_set_enable_list = 0;

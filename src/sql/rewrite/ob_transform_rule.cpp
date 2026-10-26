@@ -139,6 +139,7 @@ const char* ObTransformerCtx::get_trans_type_string(uint64_t trans_type)
     TRANS_TYPE_TO_STR(CONDITIONAL_AGGR_COALESCE)
     TRANS_TYPE_TO_STR(LATE_MATERIALIZATION)
     TRANS_TYPE_TO_STR(DISTINCT_AGGREGATE)
+    TRANS_TYPE_TO_STR(SIMPLIFY_VEC_FILTER)
     default:  return NULL;
   }
 }

@@ -62,6 +62,14 @@ int ObTransformSimplifyExpr::transform_one_stmt(common::ObIArray<ObParentDMLStmt
   UNUSED(parent_stmts);
   if (OB_ISNULL(stmt) || OB_ISNULL(stmt->get_query_ctx())) {
     ret = OB_ERR_UNEXPECTED;
+  } else if (deduplicate_only_) {
+    if (stmt->has_vec_approx()
+        && OB_FAIL(deduplicate_stmt_conditions(stmt, trans_happened))) {
+    }
+    if (OB_SUCC(ret) && trans_happened) {
+      ret = add_transform_hint(*stmt);
+    }
+    return ret;
   }
   if (OB_SUCC(ret)) {
     if (OB_FAIL(flatten_stmt_exprs(stmt, is_happened))) {
@@ -2611,7 +2619,8 @@ int ObTransformSimplifyExpr::remove_duplicate_exprs(ObQueryCtx* query_ctx,
     //select * from t1 where c1 > 1 and c1 > 1
     //like above stmt, and expr in level 0 is process here
     ObSEArray<ObRawExpr *, 4> param_conds;
-    if (param_count <= 1 || param_count > 100) {
+    const int64_t max_expr_count = deduplicate_only_ ? 256 : 100;
+    if (param_count <= 1 || param_count > max_expr_count) {
       /* use too much resource and need add lots of constraints */
     } else if (OB_FAIL(param_conds.assign(conditions))) {
     } else if (OB_FAIL(do_remove_duplicate_exprs(*query_ctx, param_conds))) {
@@ -2655,7 +2664,8 @@ int ObTransformSimplifyExpr::recursive_remove_duplicate_exprs(ObQueryCtx &query_
     } else if (expr->get_expr_type() == T_OP_OR || expr->get_expr_type() == T_OP_AND) {
       ObOpRawExpr *op_expr = static_cast<ObOpRawExpr *>(expr);
       ObSEArray<ObRawExpr *, 4> param_conds;
-      if (op_expr->get_param_count() > 100) {
+      const int64_t max_expr_count = deduplicate_only_ ? 256 : 100;
+      if (op_expr->get_param_count() > max_expr_count) {
         /* use too much resource and need add lots of constraints */
       } else if (OB_FAIL(param_conds.assign(op_expr->get_param_exprs()))) {
       } else if (OB_FAIL(do_remove_duplicate_exprs(query_ctx, param_conds))) {
@@ -2688,7 +2698,7 @@ int ObTransformSimplifyExpr::do_remove_duplicate_exprs(ObQueryCtx &query_ctx,
   if (OB_ISNULL(ctx_) || OB_ISNULL(ctx_->expr_factory_)) {
     ret = OB_ERR_UNEXPECTED;
   } else {
-    ObQuestionmarkEqualCtx cmp_ctx(false);
+    ObQuestionmarkEqualCtx cmp_ctx(deduplicate_only_);
     for (int64_t i = param_count - 1; OB_SUCC(ret) && i >= 1; i--) {
       if (OB_ISNULL(exprs.at(i))) {
         ret = OB_ERR_UNEXPECTED;
@@ -2696,6 +2706,11 @@ int ObTransformSimplifyExpr::do_remove_duplicate_exprs(ObQueryCtx &query_ctx,
       for (int64_t j = 0; OB_SUCC(ret) && j < i; j++) {
         if (OB_ISNULL(exprs.at(j))) {
           ret = OB_ERR_UNEXPECTED;
+        } else if (deduplicate_only_
+                   && (!is_safe_to_deduplicate(*exprs.at(i))
+                       || !is_safe_to_deduplicate(*exprs.at(j)))) {
+          // Repeated volatile or stateful expressions must retain their
+          // original number of evaluations.
         } else if (exprs.at(i)->same_as(*exprs.at(j), &cmp_ctx)) {
           if (OB_FAIL(exprs.remove(i))) {
           } else if (!cmp_ctx.equal_pairs_.empty()) {
@@ -3377,4 +3392,107 @@ int ObTransformSimplifyExpr::add_constraint_for_convert_case_when_by_then(ObIArr
     }
   }
   return ret;
+}
+
+int ObTransformSimplifyExpr::deduplicate_stmt_conditions(
+    ObDMLStmt *stmt,
+    bool &trans_happened)
+{
+  int ret = OB_SUCCESS;
+  bool where_happened = false;
+  bool having_happened = false;
+  bool semi_happened = false;
+  bool join_happened = false;
+  ObQueryCtx *query_ctx = NULL;
+  trans_happened = false;
+  if (OB_ISNULL(stmt) || OB_ISNULL(query_ctx = stmt->get_query_ctx())) {
+    ret = OB_ERR_UNEXPECTED;
+  } else if (OB_FAIL(remove_duplicate_exprs(query_ctx,
+                                            stmt->get_condition_exprs(),
+                                            where_happened))) {
+  } else if (stmt->is_select_stmt()
+             && OB_FAIL(remove_duplicate_exprs(
+                 query_ctx,
+                 static_cast<ObSelectStmt *>(stmt)->get_having_exprs(),
+                 having_happened))) {
+  }
+  for (int64_t i = 0; OB_SUCC(ret) && !stmt->is_insert_stmt()
+       && i < stmt->get_semi_infos().count(); ++i) {
+    bool happened = false;
+    if (OB_ISNULL(stmt->get_semi_infos().at(i))) {
+      ret = OB_ERR_UNEXPECTED;
+    } else if (OB_FAIL(remove_duplicate_exprs(
+        query_ctx,
+        stmt->get_semi_infos().at(i)->semi_conditions_,
+        happened))) {
+    } else {
+      semi_happened |= happened;
+    }
+  }
+  for (int64_t i = 0; OB_SUCC(ret) && !stmt->is_insert_stmt()
+       && i < stmt->get_joined_tables().count(); ++i) {
+    bool happened = false;
+    if (OB_FAIL(deduplicate_join_conditions(*query_ctx,
+                                            stmt->get_joined_tables().at(i),
+                                            happened))) {
+    } else {
+      join_happened |= happened;
+    }
+  }
+  if (OB_SUCC(ret)) {
+    trans_happened = where_happened || having_happened
+                     || semi_happened || join_happened;
+  }
+  return ret;
+}
+
+int ObTransformSimplifyExpr::deduplicate_join_conditions(
+    ObQueryCtx &query_ctx,
+    TableItem *table,
+    bool &trans_happened)
+{
+  int ret = OB_SUCCESS;
+  bool current_happened = false;
+  bool left_happened = false;
+  bool right_happened = false;
+  JoinedTable *join_table = NULL;
+  trans_happened = false;
+  if (OB_ISNULL(table)) {
+    ret = OB_ERR_UNEXPECTED;
+  } else if (!table->is_joined_table()) {
+    // Nothing to rewrite.
+  } else if (OB_ISNULL(join_table = static_cast<JoinedTable *>(table))
+             || OB_ISNULL(join_table->left_table_)
+             || OB_ISNULL(join_table->right_table_)) {
+    ret = OB_ERR_UNEXPECTED;
+  } else if (OB_FAIL(remove_duplicate_exprs(&query_ctx,
+                                            join_table->join_conditions_,
+                                            current_happened))) {
+  } else if (OB_FAIL(SMART_CALL(deduplicate_join_conditions(query_ctx,
+                                                            join_table->left_table_,
+                                                            left_happened)))) {
+  } else if (OB_FAIL(SMART_CALL(deduplicate_join_conditions(query_ctx,
+                                                            join_table->right_table_,
+                                                            right_happened)))) {
+  } else {
+    trans_happened = current_happened || left_happened || right_happened;
+  }
+  return ret;
+}
+
+bool ObTransformSimplifyExpr::is_safe_to_deduplicate(
+    const ObRawExpr &expr) const
+{
+  return !expr.has_flag(CNT_SUB_QUERY)
+         && !expr.has_flag(CNT_ONETIME)
+         && !expr.has_flag(CNT_CUR_TIME)
+         && !expr.has_flag(CNT_DYNAMIC_USER_VARIABLE)
+         && !expr.has_flag(CNT_STATE_FUNC)
+         && !expr.has_flag(CNT_LAST_INSERT_ID)
+         && !expr.has_flag(CNT_RAND_FUNC)
+         && !expr.has_flag(CNT_PL_UDF)
+         && !expr.has_flag(CNT_VOLATILE_CONST)
+         && !expr.has_flag(CNT_PSEUDO_COLUMN)
+         && !expr.has_flag(CNT_OP_PSEUDO_COLUMN)
+         && !expr.has_flag(CNT_ASSIGN_EXPR);
 }

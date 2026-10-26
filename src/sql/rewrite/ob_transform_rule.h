@@ -217,6 +217,7 @@ enum TRANSFORM_TYPE {
   CONDITIONAL_AGGR_COALESCE     ,
   LATE_MATERIALIZATION          ,
   DISTINCT_AGGREGATE            ,
+  SIMPLIFY_VEC_FILTER           , // deduplicate deterministic predicates for vector index queries
   TRANSFORM_TYPE_COUNT_PLUS_ONE ,
 };
 
