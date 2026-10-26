@@ -2687,45 +2687,46 @@ int ObRawExprUtils::try_add_cast_expr_above(ObRawExprFactory *expr_factory,
   CK(OB_NOT_NULL(session) && OB_NOT_NULL(expr_factory));
   OZ(ObRawExprUtils::check_need_cast_expr(src_type, dst_type, need_cast, ignore_dup_cast_error));
   if (OB_SUCC(ret) && need_cast) {
-    if (T_FUN_SYS_CAST == expr.get_expr_type()
+    const bool stack_on_existing_implicit_cast =
+        T_FUN_SYS_CAST == expr.get_expr_type()
         && expr.has_flag(IS_OP_OPERAND_IMPLICIT_CAST)
         && !ignore_dup_cast_error
         && !((src_type.is_collection_sql_type()
                   && (dst_type.is_character_type() || dst_type.is_null()))
-            || (src_type.is_character_type() && dst_type.is_character_type())))
-      {
-      ret = OB_ERR_UNEXPECTED;
-#ifdef DEBUG
-      LOG_ERROR("try to add implicit cast again, check if type deduction is correct",
-                K(ret), K(expr), K(dst_type),
-                K(session->get_current_query_string()));
-#else
-      LOG_WARN("try to add implicit cast again, check if type deduction is correct",
-                K(ret), K(expr), K(dst_type), K(src_type), K(ignore_dup_cast_error),
-                K(session->get_current_query_string()));
-#endif
-    } else {
-      //setup implicit cast charset convert ignore error
-      ObCastMode cm_zf = cm;
-      if ((cm_zf & CM_COLUMN_CONVERT) != 0) {
-       //if CM_CHARSET_CONVERT_IGNORE_ERR should be set is judged in column_conv expr.
-      } else {
-        cm_zf |= CM_CHARSET_CONVERT_IGNORE_ERR;
-      }
-      // setup zerofill cm
-      // eg: select concat(cast(c_zf as char(10)), cast(col_no_zf as char(10))) from t1;
-      if (dst_type.is_string_type() &&
-          expr.get_result_type().has_result_flag(ZEROFILL_FLAG)) {
-        cm_zf |= CM_ZERO_FILL;
-      }
-      if (dst_type.get_cast_mode() != 0) {
-        cm_zf |= dst_type.get_cast_mode();
-      }
-      ObSysFunRawExpr *cast_expr = NULL;
-      OZ(ObRawExprUtils::create_cast_expr(*expr_factory, &expr, dst_type, cast_expr,
-                                          session, false, cm_zf, local_vars, local_var_id));
-      CK(OB_NOT_NULL(new_expr = dynamic_cast<ObRawExpr*>(cast_expr)));
+            || (src_type.is_character_type() && dst_type.is_character_type()));
+    if (stack_on_existing_implicit_cast) {
+      // A rewrite rule may replace a part of the expression tree after the first
+      // round of type deduction has already added an implicit cast for the operand.
+      // The rewritten expression is deduced once more, and the destination type
+      // requested this time can differ from the type of the cast that was added
+      // before, for example when a pair of NOT operators is collapsed into the
+      // boolean form of its operand. Casting the result of the existing cast keeps
+      // the value of the rewritten expression, so stack the new cast on top of it
+      // instead of failing the whole statement with OB_ERR_UNEXPECTED.
+      LOG_WARN("add implicit cast above an existing implicit cast",
+               K(expr), K(dst_type), K(src_type), K(ignore_dup_cast_error),
+               K(session->get_current_query_string()));
     }
+    //setup implicit cast charset convert ignore error
+    ObCastMode cm_zf = cm;
+    if ((cm_zf & CM_COLUMN_CONVERT) != 0) {
+     //if CM_CHARSET_CONVERT_IGNORE_ERR should be set is judged in column_conv expr.
+    } else {
+      cm_zf |= CM_CHARSET_CONVERT_IGNORE_ERR;
+    }
+    // setup zerofill cm
+    // eg: select concat(cast(c_zf as char(10)), cast(col_no_zf as char(10))) from t1;
+    if (dst_type.is_string_type() &&
+        expr.get_result_type().has_result_flag(ZEROFILL_FLAG)) {
+      cm_zf |= CM_ZERO_FILL;
+    }
+    if (dst_type.get_cast_mode() != 0) {
+      cm_zf |= dst_type.get_cast_mode();
+    }
+    ObSysFunRawExpr *cast_expr = NULL;
+    OZ(ObRawExprUtils::create_cast_expr(*expr_factory, &expr, dst_type, cast_expr,
+                                        session, false, cm_zf, local_vars, local_var_id));
+    CK(OB_NOT_NULL(new_expr = dynamic_cast<ObRawExpr*>(cast_expr)));
   }
   return ret;
 }

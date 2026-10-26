@@ -1,0 +1,28 @@
+# owner: ieuies
+# owner group: SQL
+# tags: subquery, expression
+# description: IFNULL with a scalar subquery and a collapsed NOT chain must not fail
+#   with OB_ERR_UNEXPECTED. Regression test for oceanbase/seekdb#1477.
+
+# The exact statement reported in the issue. It used to fail with
+# ERROR 4016 (HY000): Internal error while the rewrite pass collapsed the pair of
+# NOT operators into the boolean form of its operand.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x')));
+
+# The same predicate counted, to check that the row is filtered out.
+SELECT COUNT(*) AS cnt FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x')));
+
+# The value of the rewritten IFNULL expression itself.
+SELECT IFNULL((SELECT FALSE), !(!(1 LIKE 'x'))) AS val;
+
+# Control: a single negation is not collapsed and must keep working.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE 'x'));
+
+# Control: a literal instead of a scalar subquery.
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE 'x')));
+
+# Three-valued logic: a NULL operand keeps the NULL result.
+SELECT IFNULL((SELECT NULL), !(!(NULL LIKE 'x'))) AS val;
+
+# A longer NOT chain is collapsed the same way.
+SELECT IFNULL((SELECT NULL), !(!(!(!(1 LIKE '1'))))) AS val;
