@@ -1,0 +1,34 @@
+# Regression for issue #1477: preserve result types when simplifying even NOT chains.
+# The original failure and its two nearby controls.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE "x")));
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE "x"));
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE "x")));
+
+# Check both short-circuit results and an actually evaluated fallback.
+SELECT 1 FROM dual WHERE IFNULL((SELECT TRUE), !(!(1 LIKE "x")));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(1 LIKE "x")));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!("x" LIKE "x")));
+SELECT IFNULL((SELECT FALSE), !(!(1 LIKE "x"))) AS value;
+SELECT IFNULL((SELECT TRUE), !(!(1 LIKE "x"))) AS value;
+SELECT IFNULL((SELECT NULL), !(!(1 LIKE "x"))) AS value;
+SELECT IFNULL((SELECT NULL), !(!("x" LIKE "x"))) AS value;
+SELECT IFNULL((SELECT NULL), !(!(NULL LIKE "x"))) AS value;
+
+# Longer even NOT chains must preserve the same boolean and NULL semantics.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(!(!(1 LIKE "x")))));
+SELECT IFNULL((SELECT NULL), !(!(!(!("x" LIKE "x"))))) AS value;
+SELECT IFNULL((SELECT NULL), !(!(!(!(NULL LIKE "x"))))) AS value;
+
+# Non-boolean operands still require boolean normalization.
+SELECT IFNULL((SELECT NULL), !(!(2))) AS value;
+SELECT IFNULL((SELECT NULL), !(!(0))) AS value;
+SELECT IFNULL((SELECT NULL), !(!(NULL))) AS value;
+
+# IFNULL's first argument has a separate even-NOT simplification path.
+SELECT IFNULL(!(!(1 LIKE "x")), (SELECT FALSE)) AS value;
+SELECT IFNULL(!(!("x" LIKE "x")), (SELECT FALSE)) AS value;
+SELECT IFNULL(!(!(NULL LIKE "x")), (SELECT FALSE)) AS value;
+SELECT IFNULL(!(!(NULL LIKE "x")), (SELECT TRUE)) AS value;
+SELECT IFNULL(!(!(2)), (SELECT FALSE)) AS value;
+SELECT IFNULL(!(!(!(!(1 LIKE "x")))), (SELECT TRUE)) AS value;
+SELECT 1 FROM dual WHERE IFNULL(!(!(1 LIKE "x")), (SELECT FALSE));
