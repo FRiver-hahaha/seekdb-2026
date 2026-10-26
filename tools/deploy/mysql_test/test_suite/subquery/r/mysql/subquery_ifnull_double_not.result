@@ -1,0 +1,58 @@
+# issue #1477 minimal reproducer, must succeed and return no rows
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE "x")));
+1
+# control case, a single negation keeps working
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE "x"));
+1
+# control case, a literal instead of a scalar subquery keeps working
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE "x")));
+1
+# the folded NOT chain must still evaluate as a boolean
+SELECT IFNULL((SELECT NULL), !(!(1 LIKE "1"))) AS v;
+v
+1
+SELECT IFNULL((SELECT NULL), !(!(1 LIKE "x"))) AS v;
+v
+0
+SELECT IFNULL((SELECT NULL), !(!(NULL LIKE "x"))) AS v;
+v
+NULL
+# even and odd NOT chain lengths
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(!(!(1 LIKE "x")))));
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(!(1 LIKE "x"))));
+1
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(!(!(!(1 LIKE "x"))))));
+1
+# NOT over a comparison and over plain integers
+SELECT IFNULL((SELECT NULL), !(!(1 = 1))) AS v;
+v
+1
+SELECT IFNULL((SELECT NULL), !(!(1 = 2))) AS v;
+v
+0
+SELECT IFNULL((SELECT NULL), !(!(2))) AS v;
+v
+1
+SELECT IFNULL((SELECT NULL), !(!(0))) AS v;
+v
+0
+# NVL shares the same rewrite
+SELECT 1 FROM dual WHERE NVL((SELECT FALSE), !(!(1 LIKE "x")));
+1
+# the folded NOT chain in IFNULL's first argument, with and without a subquery
+SELECT IFNULL(!(!(1 LIKE "x")), (SELECT FALSE)) AS v FROM dual;
+v
+0
+SELECT 1 FROM dual WHERE IFNULL(!(!(1 LIKE "x")), FALSE);
+1
+# the same expressions over a real table
+CREATE TABLE t_ifnull_double_not (c1 INT PRIMARY KEY);
+INSERT INTO t_ifnull_double_not VALUES (1), (2);
+SELECT COUNT(*) AS cnt FROM t_ifnull_double_not WHERE IFNULL((SELECT FALSE), !(!(1 LIKE "x")));
+cnt
+0
+SELECT COUNT(*) AS cnt FROM t_ifnull_double_not WHERE IFNULL((SELECT NULL), !(!(1 LIKE "1")));
+cnt
+2
+DROP TABLE t_ifnull_double_not;

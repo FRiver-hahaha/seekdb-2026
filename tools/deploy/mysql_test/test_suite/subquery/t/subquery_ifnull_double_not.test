@@ -1,0 +1,43 @@
+#owner: zui2sui
+#owner group: sql
+#tags: optimizer
+#description: Regression for issue #1477. IFNULL with a boolean scalar subquery and a double-negated LIKE failed with "ERROR 4016 (HY000): Internal error" while re-deducing the type of the enclosing expression. Folding an even NOT chain used to drop the NOT result type, so the enclosing expression had to add an implicit cast on top of an implicit cast that already existed.
+
+--echo # issue #1477 minimal reproducer, must succeed and return no rows
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE "x")));
+
+--echo # control case, a single negation keeps working
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE "x"));
+
+--echo # control case, a literal instead of a scalar subquery keeps working
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE "x")));
+
+--echo # the folded NOT chain must still evaluate as a boolean
+SELECT IFNULL((SELECT NULL), !(!(1 LIKE "1"))) AS v;
+SELECT IFNULL((SELECT NULL), !(!(1 LIKE "x"))) AS v;
+SELECT IFNULL((SELECT NULL), !(!(NULL LIKE "x"))) AS v;
+
+--echo # even and odd NOT chain lengths
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(!(!(1 LIKE "x")))));
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(!(1 LIKE "x"))));
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(!(!(!(1 LIKE "x"))))));
+
+--echo # NOT over a comparison and over plain integers
+SELECT IFNULL((SELECT NULL), !(!(1 = 1))) AS v;
+SELECT IFNULL((SELECT NULL), !(!(1 = 2))) AS v;
+SELECT IFNULL((SELECT NULL), !(!(2))) AS v;
+SELECT IFNULL((SELECT NULL), !(!(0))) AS v;
+
+--echo # NVL shares the same rewrite
+SELECT 1 FROM dual WHERE NVL((SELECT FALSE), !(!(1 LIKE "x")));
+
+--echo # the folded NOT chain in IFNULL's first argument, with and without a subquery
+SELECT IFNULL(!(!(1 LIKE "x")), (SELECT FALSE)) AS v FROM dual;
+SELECT 1 FROM dual WHERE IFNULL(!(!(1 LIKE "x")), FALSE);
+
+--echo # the same expressions over a real table
+CREATE TABLE t_ifnull_double_not (c1 INT PRIMARY KEY);
+INSERT INTO t_ifnull_double_not VALUES (1), (2);
+SELECT COUNT(*) AS cnt FROM t_ifnull_double_not WHERE IFNULL((SELECT FALSE), !(!(1 LIKE "x")));
+SELECT COUNT(*) AS cnt FROM t_ifnull_double_not WHERE IFNULL((SELECT NULL), !(!(1 LIKE "1")));
+DROP TABLE t_ifnull_double_not;
