@@ -1,0 +1,18 @@
+# Preserve the result type when simplifying an even number of NOT operators.
+# LIKE returns INT64 while NOT returns INT32. Changing the IFNULL argument type
+# must not introduce another implicit cast above the scalar subquery's cast.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x')));
+
+# Nearby forms must keep their existing behavior.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE 'x'));
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE 'x')));
+
+# Exercise both IFNULL branches and preserve three-valued boolean semantics.
+SELECT 1 FROM dual WHERE IFNULL((SELECT TRUE), !(!(1 LIKE 'x')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(1 LIKE '1')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(1 LIKE 'x')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(NULL LIKE 'x')));
+
+# Longer NOT chains and non-boolean operands must still normalize correctly.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(!(!(1 LIKE 'x')))));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(2))) = 1;
