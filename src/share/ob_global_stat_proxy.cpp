@@ -16,10 +16,12 @@
 
 #define USING_LOG_PREFIX SHARE
 
+#include <algorithm>
+
 #include "share/ob_global_stat_proxy.h"
 #include "share/ob_dml_sql_splicer.h"
 #include "share/inner_table/ob_inner_table_schema_constants.h"
-#include "share/ob_share_util.h" // ObShareUtil::get_rs_default_timeout_ctx
+#include "share/ob_share_util.h" // ObShareUtil::set_default_timeout_ctx
 #include "common/ob_timeout_ctx.h" // ObTimeoutCtx
 
 namespace oceanbase
@@ -28,6 +30,20 @@ using namespace common;
 using namespace common::sqlclient;
 namespace share
 {
+
+// __all_global_stat is stored in __all_core_table, so loading it scans the whole core table and
+// updating it issues DML in the same transaction. ObShareUtil::get_rs_default_timeout_ctx()
+// only provides the RPC budget (rpc_timeout, 2s by default), which is too small for this on
+// platforms without O_DIRECT where a single core table statement can take several seconds.
+// Use the regular internal SQL budget instead; a caller-provided timeout context still wins.
+static int set_global_stat_timeout_ctx(common::ObTimeoutCtx &ctx)
+{
+  // Never use a budget tighter than the previous rpc_timeout based one, but always allow at
+  // least the regular internal SQL budget.
+  const int64_t timeout_us = std::max(config::rpc_timeout(),
+                                      config::internal_sql_execute_timeout());
+  return ObShareUtil::set_default_timeout_ctx(ctx, timeout_us);
+}
 
 int ObGlobalStatProxy::set_init_value(
     const int64_t core_schema_version,
@@ -537,7 +553,7 @@ int ObGlobalStatProxy::update(const ObGlobalStatItem::ItemList &list,
   ObTimeoutCtx ctx;
   if (!is_valid() || list.is_empty()) {
     ret = OB_INVALID_ARGUMENT;
-  } else if (OB_FAIL(ObShareUtil::get_rs_default_timeout_ctx(ctx))) {
+  } else if (OB_FAIL(set_global_stat_timeout_ctx(ctx))) {
   } else if (OB_FAIL(core_table_.load_for_update())) {
   } else {
     const ObGlobalStatItem *it = list.get_first();
@@ -574,7 +590,7 @@ int ObGlobalStatProxy::get(
   ObTimeoutCtx ctx;
   if (!is_valid() || list.is_empty()) {
     ret = OB_INVALID_ARGUMENT;
-  } else if (OB_FAIL(ObShareUtil::get_rs_default_timeout_ctx(ctx))) {
+  } else if (OB_FAIL(set_global_stat_timeout_ctx(ctx))) {
   } else if (!for_update && OB_FAIL(core_table_.load())) {
   } else if (for_update && OB_FAIL(core_table_.load_for_update())) {
   } else {
