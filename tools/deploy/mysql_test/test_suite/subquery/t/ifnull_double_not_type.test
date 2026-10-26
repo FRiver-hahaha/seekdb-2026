@@ -1,0 +1,22 @@
+--echo # Bug #1477: simplifying NOT chains must preserve their result type.
+
+# Reproducer and the two controls from the issue.
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE "x")));
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE "x"));
+SELECT 1 AS matched FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE "x")));
+
+# Exercise true/NULL scalar subqueries and longer even NOT chains.
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT TRUE), !(!(1 LIKE 'x')));
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!(1 LIKE '1')));
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!(1 LIKE 'x')));
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT FALSE), !(!(!(!(1 LIKE 'x')))));
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT TRUE), !(!(!(!(1 LIKE 'x')))));
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!(NULL LIKE 'x')));
+
+# Double negation still converts non-boolean operands to a boolean.
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!2));
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!0));
+
+# The first IFNULL operand also has a dedicated NOT-chain simplification.
+SELECT 1 AS matched FROM dual WHERE IFNULL(!(!(1 LIKE 'x')), (SELECT FALSE));
+SELECT 1 AS matched FROM dual WHERE IFNULL(!(!(1 LIKE '1')), (SELECT FALSE));

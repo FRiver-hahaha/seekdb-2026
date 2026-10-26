@@ -1,0 +1,32 @@
+# Bug #1477: simplifying NOT chains must preserve their result type.
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE "x")));
+matched
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE "x"));
+matched
+SELECT 1 AS matched FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE "x")));
+matched
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT TRUE), !(!(1 LIKE 'x')));
+matched
+1
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!(1 LIKE '1')));
+matched
+1
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!(1 LIKE 'x')));
+matched
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT FALSE), !(!(!(!(1 LIKE 'x')))));
+matched
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT TRUE), !(!(!(!(1 LIKE 'x')))));
+matched
+1
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!(NULL LIKE 'x')));
+matched
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!2));
+matched
+1
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!0));
+matched
+SELECT 1 AS matched FROM dual WHERE IFNULL(!(!(1 LIKE 'x')), (SELECT FALSE));
+matched
+SELECT 1 AS matched FROM dual WHERE IFNULL(!(!(1 LIKE '1')), (SELECT FALSE));
+matched
+1
