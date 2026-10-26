@@ -16,6 +16,7 @@
 
 #define USING_LOG_PREFIX SQL_REWRITE
 #include "sql/rewrite/ob_transform_simplify_expr.h"
+#include "common/object/ob_obj_type.h"
 #include "sql/rewrite/ob_transform_utils.h"
 #include "sql/rewrite/ob_stmt_comparer.h"
 #include "sql/optimizer/ob_optimizer_util.h"
@@ -45,6 +46,45 @@ int has_scalar_in_predicate(ObRawExpr *expr, bool &has_in)
   } else {
     for (int64_t i = 0; OB_SUCC(ret) && !has_in && i < expr->get_param_count(); ++i) {
       if (OB_FAIL(has_scalar_in_predicate(expr->get_param_expr(i), has_in))) {
+      }
+    }
+  }
+  return ret;
+}
+
+// A removed not chain deduces a fixed result type (ObExprNot returns int32),
+// while its inner expr may deduce a wider type (e.g. like returns bigint).
+// Exposing the wider type changes the merged type of ancestor operators, and
+// the following type deduction then tries to add another implicit cast above
+// an operand that has already been implicitly cast, which fails with
+// OB_ERR_UNEXPECTED (github issue 1477). Keep the original result type when
+// the replacement widens the type.
+int keep_removed_not_result_type(ObRawExprFactory &expr_factory,
+                                 const ObSQLSessionInfo &session,
+                                 const ObRawExpr &removed_not_expr,
+                                 ObRawExpr *&new_expr)
+{
+  int ret = OB_SUCCESS;
+  if (OB_ISNULL(new_expr)) {
+    ret = OB_ERR_UNEXPECTED;
+    LOG_WARN("unexpected null bool expr", K(ret));
+  } else {
+    const ObObjType origin_type = removed_not_expr.get_result_type().get_type();
+    const ObObjType new_type = new_expr->get_result_type().get_type();
+    if (oceanbase::common::ob_obj_type_class(new_type)
+          == oceanbase::common::ob_obj_type_class(origin_type)
+        && new_type > origin_type) {
+      ObRawExpr *cast_expr = NULL;
+      if (OB_FAIL(ObRawExprUtils::try_add_cast_expr_above(&expr_factory, &session,
+                                                          *new_expr,
+                                                          removed_not_expr.get_result_type(),
+                                                          cast_expr))) {
+        LOG_WARN("failed to keep result type of removed not expr", K(ret));
+      } else if (OB_ISNULL(cast_expr)) {
+        ret = OB_ERR_UNEXPECTED;
+        LOG_WARN("unexpected null cast expr", K(ret));
+      } else {
+        new_expr = cast_expr;
       }
     }
   }
@@ -1278,6 +1318,11 @@ int ObTransformSimplifyExpr::inner_remove_dummy_nvl(ObDMLStmt *stmt,
         } else if (OB_ISNULL(new_child)) {
           ret = OB_ERR_UNEXPECTED;
           LOG_WARN("unexpected null bool expr", K(ret));
+        } else if (OB_FAIL(keep_removed_not_result_type(*ctx_->expr_factory_,
+                                                        *ctx_->session_info_,
+                                                        *child_0,
+                                                        new_child))) {
+          LOG_WARN("failed to keep result type of removed not expr", K(ret));
         } else if (OB_FAIL(new_child->formalize(ctx_->session_info_))) {
         } else {
           op_expr->get_param_expr(0) = new_child;
@@ -2381,6 +2426,9 @@ int ObTransformSimplifyExpr::do_push_not(ObRawExpr *&expr,
       if (OB_FAIL(ObRawExprUtils::try_create_bool_expr(cur, temp, *expr_factory))) {
       } else if (OB_ISNULL(temp)) {
         ret = OB_ERR_UNEXPECTED;
+      } else if (OB_FAIL(keep_removed_not_result_type(*expr_factory, *ctx_->session_info_,
+                                                      *expr, temp))) {
+        LOG_WARN("failed to keep result type of removed not expr", K(ret));
       } else if (OB_FAIL(temp->formalize(ctx_->session_info_))) {
       } else {
         expr = temp;

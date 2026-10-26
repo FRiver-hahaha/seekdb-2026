@@ -1,0 +1,30 @@
+# owner: resolver
+# owner group: sql1
+# tags: subquery, rewrite
+# description: regression for github issue 1477
+#
+
+--echo #
+--echo # Issue 1477: IFNULL with a boolean scalar subquery and a double-negated
+--echo # LIKE used to fail with ERROR 4016 (internal error) during rewrite/type
+--echo # deduction. Removing the double negation exposes the wider result type
+--echo # of LIKE, which shifts the merged type of IFNULL and makes type
+--echo # deduction add another implicit cast above the already-cast subquery
+--echo # operand.
+--echo #
+
+--echo # Minimal reproduction: the scalar subquery returns non-NULL FALSE,
+--echo # so IFNULL evaluates to false and no row is returned.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE "x")));
+
+--echo # Control: one negation instead of two.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE "x"));
+
+--echo # Control: a literal instead of a scalar subquery.
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE "x")));
+
+--echo # Same shape with swapped IFNULL arguments.
+SELECT 1 FROM dual WHERE IFNULL(!(!(1 LIKE "x")), (SELECT FALSE));
+
+--echo # Double negation over a TINYINT predicate keeps working.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 = "x")));

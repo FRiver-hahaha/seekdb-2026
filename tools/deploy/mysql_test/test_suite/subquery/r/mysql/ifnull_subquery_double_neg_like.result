@@ -1,0 +1,20 @@
+#
+# Issue 1477: IFNULL with a boolean scalar subquery and a double-negated
+# LIKE used to fail with ERROR 4016 (internal error) during rewrite/type
+# deduction. Removing the double negation exposes the wider result type
+# of LIKE, which shifts the merged type of IFNULL and makes type
+# deduction add another implicit cast above the already-cast subquery
+# operand.
+#
+
+# Minimal reproduction: the scalar subquery returns non-NULL FALSE,
+# so IFNULL evaluates to false and no row is returned.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE "x")));
+# Control: one negation instead of two.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE "x"));
+# Control: a literal instead of a scalar subquery.
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE "x")));
+# Same shape with swapped IFNULL arguments.
+SELECT 1 FROM dual WHERE IFNULL(!(!(1 LIKE "x")), (SELECT FALSE));
+# Double negation over a TINYINT predicate keeps working.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 = "x")));
