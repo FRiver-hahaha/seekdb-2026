@@ -1,0 +1,34 @@
+# Regression for GitHub issue #1477: removing double NOT must preserve its type.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE "x")));
+
+# Control cases: one NOT and a literal first argument.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE "x"));
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE "x")));
+
+# A non-NULL scalar subquery determines the result, including TRUE.
+SELECT 1 FROM dual WHERE IFNULL((SELECT TRUE), !(!(1 LIKE "x")));
+
+# Exercise the fallback with true, false and NULL predicates.
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULLIF(FALSE, FALSE)), !(!('abc' LIKE 'a%')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULLIF(FALSE, FALSE)), !(!('abc' LIKE 'x%')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULLIF(FALSE, FALSE)), !(!(NULL LIKE 'a%')));
+
+# Preserve both boolean normalization and NULL propagation for longer NOT chains.
+SELECT 1 FROM dual WHERE IFNULL((SELECT TRUE), !(!(!(!(1 LIKE 'x')))));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULLIF(FALSE, FALSE)), !(!(!(!('abc' LIKE 'a%')))));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULLIF(FALSE, FALSE)), !(!(!('abc' LIKE 'x%'))));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULLIF(FALSE, FALSE)), !(!(!(!(NULL LIKE 'a%')))));
+
+# Predicate contexts must still expose LIKE to index range extraction.
+--disable_warnings
+DROP TABLE IF EXISTS ifnull_double_not_idx;
+--enable_warnings
+CREATE TABLE ifnull_double_not_idx (id INT PRIMARY KEY, value VARCHAR(32), KEY idx_value(value));
+INSERT INTO ifnull_double_not_idx VALUES (1, 'abc'), (2, 'abcd'), (3, 'abce'), (4, 'xyz'), (5, 'xyzb'), (6, 'other');
+let $plan = query_get_value(EXPLAIN BASIC SELECT /*+ INDEX(t idx_value) */ id FROM ifnull_double_not_idx t WHERE !(!(value LIKE 'abc%')), Query Plan, 4);
+--echo top-level predicate: $plan
+let $plan = query_get_value(EXPLAIN BASIC SELECT /*+ INDEX(t idx_value) */ id FROM ifnull_double_not_idx t WHERE !(!(value LIKE 'abc%')) AND id > 0, Query Plan, 4);
+--echo AND predicate: $plan
+let $plan = query_get_value(EXPLAIN BASIC SELECT /*+ INDEX(t idx_value) */ id FROM ifnull_double_not_idx t WHERE !(!(value LIKE 'abc%')) OR !(!(value LIKE 'xyz%')), Query Plan, 4);
+--echo OR predicate: $plan
+DROP TABLE ifnull_double_not_idx;

@@ -2300,7 +2300,7 @@ int ObTransformSimplifyExpr::push_not(ObIArray<ObRawExpr*> &conditions, bool &tr
       ret = OB_ERR_UNEXPECTED;
     } else if (!child_expr->has_flag(CNT_NOT)) {
      //do nothing
-    } else if (OB_FAIL(recursive_push_not(child_expr, push_expr_map, trans_happened))) {
+    } else if (OB_FAIL(recursive_push_not(child_expr, push_expr_map, true, trans_happened))) {
     } else {/*do nothing*/}
   }
   if (OB_SUCC(ret) && trans_happened) {
@@ -2312,6 +2312,7 @@ int ObTransformSimplifyExpr::push_not(ObIArray<ObRawExpr*> &conditions, bool &tr
 
 int ObTransformSimplifyExpr::recursive_push_not(ObRawExpr *&expr,
                                                 hash::ObHashMap<uint64_t, ObRawExpr *> &push_expr_map,
+                                                bool is_predicate,
                                                 bool &trans_happened)
 {
   int ret = OB_SUCCESS;
@@ -2319,15 +2320,27 @@ int ObTransformSimplifyExpr::recursive_push_not(ObRawExpr *&expr,
     ret = OB_ERR_UNEXPECTED;
   } else if (!expr->has_flag(IS_NOT)) {
     //do nothing
-  } else if (OB_FAIL(do_push_not(expr, push_expr_map, trans_happened))) {
+  } else {
+    // Preserve value expression types, while keeping predicates visible to range extraction.
+    ObRawExprResType res_type = expr->get_result_type();
+    if (OB_FAIL(do_push_not(expr, push_expr_map, trans_happened))) {
+    } else if (!is_predicate && OB_FAIL(ObRawExprUtils::try_add_cast_expr_above(
+                                          ctx_->expr_factory_, ctx_->session_info_,
+                                          *expr, res_type, expr))) {
+    }
   }
   for (int64_t i = 0; OB_SUCC(ret) && i < expr->get_param_count(); i++) {
     ObRawExpr *&child_expr = expr->get_param_expr(i);
+    const ObItemType parent_type = expr->get_expr_type();
+    const bool child_is_predicate = T_OP_AND == parent_type || T_OP_OR == parent_type ||
+                                   T_OP_XOR == parent_type || T_OP_NOT == parent_type ||
+                                   T_OP_BOOL == parent_type;
     if (OB_ISNULL(child_expr)) {
       ret = OB_ERR_UNEXPECTED;
     } else if (!child_expr->has_flag(CNT_NOT)) {
       //do nothing
-    } else if (OB_FAIL(SMART_CALL(recursive_push_not(child_expr, push_expr_map, trans_happened)))) {
+    } else if (OB_FAIL(SMART_CALL(recursive_push_not(child_expr, push_expr_map,
+                                                  child_is_predicate, trans_happened)))) {
     } else {/*do nothing*/}
   }
   return ret;
