@@ -1,0 +1,133 @@
+drop table if exists enh_text_t;
+drop table if exists enh_embed_t;
+call DBMS_AI_SERVICE.DROP_AI_MODEL_ENDPOINT('enh_ep_complete');
+call DBMS_AI_SERVICE.DROP_AI_MODEL_ENDPOINT('enh_ep_embed');
+call DBMS_AI_SERVICE.DROP_AI_MODEL_ENDPOINT('enh_ep_rerank');
+call DBMS_AI_SERVICE.DROP_AI_MODEL_ENDPOINT('enh_ep_ollama_c');
+call DBMS_AI_SERVICE.DROP_AI_MODEL_ENDPOINT('enh_ep_ollama_e');
+call DBMS_AI_SERVICE.DROP_AI_MODEL_ENDPOINT('enh_ep_switch');
+call DBMS_AI_SERVICE.DROP_AI_MODEL('enh_m_complete');
+call DBMS_AI_SERVICE.DROP_AI_MODEL('enh_m_embed');
+call DBMS_AI_SERVICE.DROP_AI_MODEL('enh_m_rerank');
+call DBMS_AI_SERVICE.DROP_AI_MODEL('enh_m_ollama_c');
+call DBMS_AI_SERVICE.DROP_AI_MODEL('enh_m_ollama_e');
+call DBMS_AI_SERVICE.DROP_AI_MODEL('enh_m_switch');
+select ai_prompt('{0}+{1}={2}', '1');
+ai_prompt('{0}+{1}={2}', '1')
+{"args": ["1"], "template": "{0}+{1}={2}"}
+select ai_prompt('{0}-{0}-{0}', 'x');
+ai_prompt('{0}-{0}-{0}', 'x')
+{"args": ["x"], "template": "{0}-{0}-{0}"}
+select ai_prompt('value: {0} {1}', json_object('a','1'), json_array(1,2));
+ai_prompt('value: {0} {1}', json_object('a','1'), json_array(1,2))
+{"args": [{"a": "1"}, [1, 2]], "template": "value: {0} {1}"}
+select ai_prompt('a{{0}}b', 'x');
+ai_prompt('a{{0}}b', 'x')
+{"args": ["x"], "template": "a{{0}}b"}
+create table enh_text_t (t text, l longtext);
+insert into enh_text_t values('hello {0}', 'long {0}');
+select ai_prompt(t, 'w') from enh_text_t;
+ai_prompt(t, 'w')
+{"args": ["w"], "template": "hello {0}"}
+select ai_prompt(l, 'w') from enh_text_t;
+ai_prompt(l, 'w')
+{"args": ["w"], "template": "long {0}"}
+drop table enh_text_t;
+call DBMS_AI_SERVICE.CREATE_AI_MODEL('enh_m_complete','{"type":"completion","model_name":"mock-complete"}');
+call DBMS_AI_SERVICE.CREATE_AI_MODEL('enh_m_embed','{"type":"dense_embedding","model_name":"mock-embed"}');
+call DBMS_AI_SERVICE.CREATE_AI_MODEL('enh_m_rerank','{"type":"rerank","model_name":"mock-rerank"}');
+call DBMS_AI_SERVICE.CREATE_AI_MODEL('enh_m_ollama_c','{"type":"completion","model_name":"mock-ollama-c"}');
+call DBMS_AI_SERVICE.CREATE_AI_MODEL('enh_m_ollama_e','{"type":"dense_embedding","model_name":"mock-ollama-e"}');
+call DBMS_AI_SERVICE.CREATE_AI_MODEL('enh_m_switch','{"type":"completion","model_name":"mock-switch"}');
+call DBMS_AI_SERVICE.CREATE_AI_MODEL_ENDPOINT('enh_ep_complete','{"ai_model_name":"enh_m_complete","url":"http://127.0.0.1:8000/v1/chat/completions","access_key":"sk-test","request_model_name":"mock","provider":"openai"}');
+call DBMS_AI_SERVICE.CREATE_AI_MODEL_ENDPOINT('enh_ep_embed','{"ai_model_name":"enh_m_embed","url":"http://127.0.0.1:8000/v1/embeddings","access_key":"sk-test","request_model_name":"mock","provider":"openai"}');
+call DBMS_AI_SERVICE.CREATE_AI_MODEL_ENDPOINT('enh_ep_rerank','{"ai_model_name":"enh_m_rerank","url":"http://127.0.0.1:8000/v1/rerank","access_key":"sk-test","request_model_name":"mock","provider":"siliconflow"}');
+call DBMS_AI_SERVICE.CREATE_AI_MODEL_ENDPOINT('enh_ep_ollama_c','{"ai_model_name":"enh_m_ollama_c","url":"http://127.0.0.1:8000/api/generate","request_model_name":"mock","provider":"ollama"}');
+call DBMS_AI_SERVICE.CREATE_AI_MODEL_ENDPOINT('enh_ep_ollama_e','{"ai_model_name":"enh_m_ollama_e","url":"http://127.0.0.1:8000/api/embed","request_model_name":"mock","provider":"ollama"}');
+select length(ai_complete('enh_m_complete','hello')) > 0;
+length(ai_complete('enh_m_complete','hello')) > 0
+1
+select length(ai_complete('enh_m_complete','hello','{"temperature":0.1,"max_tokens":16}')) > 0;
+length(ai_complete('enh_m_complete','hello','{"temperature":0.1,"max_tokens":16}')) > 0
+1
+select length(ai_complete('enh_m_complete','hello',null)) > 0;
+length(ai_complete('enh_m_complete','hello',null)) > 0
+1
+select length(ai_complete('enh_m_complete', ai_prompt('say {0}','hi'))) > 0;
+length(ai_complete('enh_m_complete', ai_prompt('say {0}','hi'))) > 0
+1
+select ai_complete('enh_m_complete', ai_prompt('value {3}','x'));
+ERROR HY000: Incorrect arguments to ai_prompt: invalid placeholder index
+select json_type(ai_embed('enh_m_embed','hello'));
+json_type(ai_embed('enh_m_embed','hello'))
+ARRAY
+select json_length(ai_embed('enh_m_embed','hello')) = json_length(ai_embed('enh_m_embed','world'));
+json_length(ai_embed('enh_m_embed','hello')) = json_length(ai_embed('enh_m_embed','world'))
+1
+select json_length(ai_embed('enh_m_embed','hello',3));
+json_length(ai_embed('enh_m_embed','hello',3))
+3
+select ai_embed('enh_m_embed',null) is null;
+ai_embed('enh_m_embed',null) is null
+1
+select ai_embed('enh_m_embed','hello',0);
+ERROR HY000: Incorrect arguments to ai_embed, dimension parameter must be a positive integer
+select ai_embed('enh_m_embed','hello',1.5);
+ERROR HY000: Incorrect arguments to ai_embed, dimension parameter must be an integer, not a decimal or float
+select length(ai_complete('enh_m_ollama_c','hi')) > 0;
+length(ai_complete('enh_m_ollama_c','hi')) > 0
+1
+select json_type(ai_embed('enh_m_ollama_e','hi'));
+json_type(ai_embed('enh_m_ollama_e','hi'))
+ARRAY
+select json_length(ai_embed('enh_m_ollama_e','hi',3));
+json_length(ai_embed('enh_m_ollama_e','hi',3))
+3
+call DBMS_AI_SERVICE.CREATE_AI_MODEL_ENDPOINT('enh_ep_switch','{"ai_model_name":"enh_m_switch","url":"http://127.0.0.1:8000/v1/chat/completions","access_key":"sk-test","request_model_name":"mock","provider":"openai"}');
+call DBMS_AI_SERVICE.ALTER_AI_MODEL_ENDPOINT('enh_ep_switch','{"provider":"ollama","url":"http://127.0.0.1:8000/api/generate"}');
+select PROVIDER, URL from oceanbase.DBA_OB_AI_MODEL_ENDPOINTS where ENDPOINT_NAME = 'enh_ep_switch';
+PROVIDER	URL
+ollama	http://127.0.0.1:8000/api/generate
+select length(ai_complete('enh_m_switch','hi')) > 0;
+length(ai_complete('enh_m_switch','hi')) > 0
+1
+select json_length(ai_rerank('enh_m_rerank','query', json_array('doc a','doc b','doc c')));
+json_length(ai_rerank('enh_m_rerank','query', json_array('doc a','doc b','doc c')))
+3
+select json_length(ai_rerank('enh_m_rerank','query', json_array('d01','d02','d03','d04','d05','d06','d07','d08','d09','d10','d11','d12','d13','d14','d15','d16','d17','d18','d19','d20','d21','d22','d23','d24','d25')));
+json_length(ai_rerank('enh_m_rerank','query', json_array('d01','d02','d03','d04','d05','d06','d07','d08','d09','d10','d11','d12','d13','d14','d15','d16','d17','d18','d19','d20','d21','d22','d23','d24','d25')))
+25
+select json_length(ai_rerank('enh_m_rerank','query', json_array(json_object('id',1,'text','alpha'),json_object('id',2,'text','beta'),json_object('id',3,'text','gamma')), 'text'));
+json_length(ai_rerank('enh_m_rerank','query', json_array(json_object('id',1,'text','alpha'),json_object('id',2,'text','beta'),json_object('id',3,'text','gamma')), 'text'))
+3
+create table enh_embed_t (id int, a varchar(20));
+insert into enh_embed_t values (1,'x'),(2,null),(3,'y'),(4,'z'),(5,'w');
+select id, ai_embed('enh_m_embed',a) is null from enh_embed_t order by id;
+id	ai_embed('enh_m_embed',a) is null
+1	0
+2	1
+3	0
+4	0
+5	0
+select count(distinct ai_embed('enh_m_embed',a)) from enh_embed_t;
+count(distinct ai_embed('enh_m_embed',a))
+4
+select id, json_length(ai_embed('enh_m_embed',a)) = json_length(ai_embed('enh_m_embed','hello')) from enh_embed_t where a is not null order by id;
+id	json_length(ai_embed('enh_m_embed',a)) = json_length(ai_embed('enh_m_embed','hello'))
+1	1
+3	1
+4	1
+5	1
+drop table enh_embed_t;
+call DBMS_AI_SERVICE.DROP_AI_MODEL_ENDPOINT('enh_ep_complete');
+call DBMS_AI_SERVICE.DROP_AI_MODEL_ENDPOINT('enh_ep_embed');
+call DBMS_AI_SERVICE.DROP_AI_MODEL_ENDPOINT('enh_ep_rerank');
+call DBMS_AI_SERVICE.DROP_AI_MODEL_ENDPOINT('enh_ep_ollama_c');
+call DBMS_AI_SERVICE.DROP_AI_MODEL_ENDPOINT('enh_ep_ollama_e');
+call DBMS_AI_SERVICE.DROP_AI_MODEL_ENDPOINT('enh_ep_switch');
+call DBMS_AI_SERVICE.DROP_AI_MODEL('enh_m_complete');
+call DBMS_AI_SERVICE.DROP_AI_MODEL('enh_m_embed');
+call DBMS_AI_SERVICE.DROP_AI_MODEL('enh_m_rerank');
+call DBMS_AI_SERVICE.DROP_AI_MODEL('enh_m_ollama_c');
+call DBMS_AI_SERVICE.DROP_AI_MODEL('enh_m_ollama_e');
+call DBMS_AI_SERVICE.DROP_AI_MODEL('enh_m_switch');

@@ -2,17 +2,18 @@ select ai_prompt('{0}+{1}={2} 吗？请回答true或false','1');
 ai_prompt('{0}+{1}={2} 吗？请回答true或false','1')
 {"args": ["1"], "template": "{0}+{1}={2} 吗？请回答true或false"}
 select ai_prompt('{0}+{1}={2} 吗？请回答true或false',json_object("a","1"));
-ERROR 0A000: json type is not supported not supported
+ai_prompt('{0}+{1}={2} 吗？请回答true或false',json_object("a","1"))
+{"args": [{"a": "1"}], "template": "{0}+{1}={2} 吗？请回答true或false"}
 select ai_prompt();
 ERROR 42000: Incorrect parameter count in the call to native function 'ai_prompt'
 select ai_prompt(1);
-ERROR 22000: Invalid data type for the operation
+ERROR 22000: invalid obj type for type promotion: left_type=ai_prompt, template must be a string type right_type=(null)
 select ai_prompt(1.2);
-ERROR 22000: Invalid data type for the operation
+ERROR 22000: invalid obj type for type promotion: left_type=ai_prompt, template must be a string type right_type=(null)
 select ai_prompt(json_object("a","1"));
-ERROR 22000: Invalid data type for the operation
+ERROR 22000: invalid obj type for type promotion: left_type=ai_prompt, template must be a string type right_type=(null)
 select ai_prompt('{0}+{1}={2} 吗？请回答true或false',1);
-ERROR 22000: Invalid data type for the operation
+ERROR 22000: invalid obj type for type promotion: left_type=ai_prompt, argument must be a string or json type right_type=(null)
 drop table if exists t1;
 create table t1 (nr char(5), a varchar(10), b BINARY(20), c VARBINARY(20));
 insert into t1 values( 'a', 'b', "oExGTLHmkvIGQekFkd" , "oExGTLHmkvIGQekFkd");
@@ -47,15 +48,25 @@ insert into t1 values(3, 'aaa', 'bbb', 'ccc', 'ddd');
 insert into t1 values(6, 'aaa', 'BBB', 'ccc', 'DDD');
 insert into t1 values(7, 'AA', 'bb', 'CC', 'dd');
 select ai_prompt(nr) from t1;
-ERROR 22000: Invalid data type for the operation
+ERROR 22000: invalid obj type for type promotion: left_type=ai_prompt, template must be a string type right_type=(null)
 select ai_prompt(a) from t1;
-ERROR 22000: Invalid data type for the operation
+ERROR 22000: invalid obj type for type promotion: left_type=ai_prompt, template must be a string type right_type=(null)
 select ai_prompt(b) from t1;
-ERROR 22000: Invalid data type for the operation
+ai_prompt(b)
+{"args": [], "template": "b"}
+{"args": [], "template": "bb"}
+{"args": [], "template": "bbb"}
+{"args": [], "template": "BBB"}
+{"args": [], "template": "bb"}
 select ai_prompt(c) from t1;
-ERROR 22000: Invalid data type for the operation
+ERROR 22000: invalid obj type for type promotion: left_type=ai_prompt, template must be a string type right_type=(null)
 select ai_prompt(d) from t1;
-ERROR 22000: Invalid data type for the operation
+ai_prompt(d)
+{"args": [], "template": "d"}
+{"args": [], "template": "dd"}
+{"args": [], "template": "ddd"}
+{"args": [], "template": "DDD"}
+{"args": [], "template": "dd"}
 drop table t1;
 drop table if exists t1;
 create table t1 (nr char(5), a varchar(10), b BINARY(20), c VARBINARY(20));
@@ -89,37 +100,37 @@ insert into t1 values(1, 'aa', 'bb', 'cc', 'dd');
 insert into t1 values(2, 'AA', 'BB', 'CC', 'DD');
 insert into t1 values(3, 'aaa', '世界', 'ccc', '和平');
 select ai_prompt(cast(a1 AS datetime)) from t1 order by nr asc;
-ERROR 22000: Invalid data type for the operation
+ERROR 22000: invalid obj type for type promotion: left_type=ai_prompt, template must be a string type right_type=(null)
 select ai_prompt(cast(a1 AS char(2)),cast(a1 AS datetime)) from t1 order by nr asc;
-ERROR 22000: Invalid data type for the operation
+ERROR 22000: invalid obj type for type promotion: left_type=ai_prompt, argument must be a string or json type right_type=(null)
 select ai_prompt(cast(a1 AS decimal(9,2))) from t1 order by nr asc;
-ERROR 22000: Invalid data type for the operation
+ERROR 22000: invalid obj type for type promotion: left_type=ai_prompt, template must be a string type right_type=(null)
 select ai_prompt(cast(a1 AS char(2)),cast(a1 AS decimal(9,2))) from t1 order by nr asc;
-ERROR 22000: Invalid data type for the operation
+ERROR 22000: invalid obj type for type promotion: left_type=ai_prompt, argument must be a string or json type right_type=(null)
 select ai_prompt(cast(a1 AS decimal(9))) from t1 order by nr asc;
-ERROR 22000: Invalid data type for the operation
+ERROR 22000: invalid obj type for type promotion: left_type=ai_prompt, template must be a string type right_type=(null)
 select ai_prompt(cast(a1 AS char(2)),cast(a1 AS decimal(9))) from t1 order by nr asc;
-ERROR 22000: Invalid data type for the operation
+ERROR 22000: invalid obj type for type promotion: left_type=ai_prompt, argument must be a string or json type right_type=(null)
 select ai_prompt(cast(a1 AS date)) from t1 order by nr asc;
-ERROR 22000: Invalid data type for the operation
+ERROR 22000: invalid obj type for type promotion: left_type=ai_prompt, template must be a string type right_type=(null)
 select ai_prompt(cast(a1 AS char(2)),cast(a1 AS date)) from t1 order by nr asc;
-ERROR 22000: Invalid data type for the operation
+ERROR 22000: invalid obj type for type promotion: left_type=ai_prompt, argument must be a string or json type right_type=(null)
 select ai_prompt(cast(a1 AS signed integer)) from t1 order by nr asc;
-ERROR 22000: Invalid data type for the operation
+ERROR 22000: invalid obj type for type promotion: left_type=ai_prompt, template must be a string type right_type=(null)
 select ai_prompt(cast(a1 AS char(2)),cast(a1 AS signed integer)) from t1 order by nr asc;
-ERROR 22000: Invalid data type for the operation
+ERROR 22000: invalid obj type for type promotion: left_type=ai_prompt, argument must be a string or json type right_type=(null)
 select ai_prompt(cast(a1 AS unsigned)) from t1 order by nr asc;
-ERROR 22000: Invalid data type for the operation
+ERROR 22000: invalid obj type for type promotion: left_type=ai_prompt, template must be a string type right_type=(null)
 select ai_prompt(cast(a1 AS char(2)),cast(a1 AS unsigned)) from t1 order by nr asc;
-ERROR 22000: Invalid data type for the operation
+ERROR 22000: invalid obj type for type promotion: left_type=ai_prompt, argument must be a string or json type right_type=(null)
 select ai_prompt(cast(a1 AS time)) from t1 order by nr asc;
-ERROR 22000: Invalid data type for the operation
+ERROR 22000: invalid obj type for type promotion: left_type=ai_prompt, template must be a string type right_type=(null)
 select ai_prompt(cast(a1 AS char(2)),cast(a1 AS time)) from t1 order by nr asc;
-ERROR 22000: Invalid data type for the operation
+ERROR 22000: invalid obj type for type promotion: left_type=ai_prompt, argument must be a string or json type right_type=(null)
 select ai_prompt(cast(a1 AS signed)) from t1 order by nr asc;
-ERROR 22000: Invalid data type for the operation
+ERROR 22000: invalid obj type for type promotion: left_type=ai_prompt, template must be a string type right_type=(null)
 select ai_prompt(cast(a1 AS char(2)),cast(a1 AS signed)) from t1 order by nr asc;
-ERROR 22000: Invalid data type for the operation
+ERROR 22000: invalid obj type for type promotion: left_type=ai_prompt, argument must be a string or json type right_type=(null)
 select ai_prompt(cast(a1 AS binary)) from t1 order by nr asc;
 ai_prompt(cast(a1 AS binary))
 {"args": [], "template": "aa"}
@@ -142,9 +153,9 @@ ai_prompt(cast(a1 AS char(2)))
 {"args": [], "template": "aa"}
 drop table t1;
 select ai_prompt(null);
-ERROR 22000: Invalid data type for the operation
+ERROR 22000: invalid obj type for type promotion: left_type=ai_prompt, template must be a string type right_type=(null)
 select ai_prompt('a',null);
-ERROR 22000: Invalid data type for the operation
+ERROR 22000: invalid obj type for type promotion: left_type=ai_prompt, argument must be a string or json type right_type=(null)
 select ai_prompt('');
 ERROR HY000: Invalid argument
 select ai_prompt('1+1=?','');
