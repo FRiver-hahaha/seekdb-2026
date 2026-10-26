@@ -227,6 +227,7 @@ SQL_INTERFACE_CLOSURE_HEADERS = [
     "engine/expr/ob_postfix_expression.h",
     "engine/expr/ob_sql_expression.h",
     "engine/expr/ob_sql_expression_factory.h",
+    "engine/expr/ob_uuid_node.h",
     "engine/ob_des_exec_context.h",
     "engine/ob_engine_op_traits.h",
     "engine/ob_exec_feedback_info.h",

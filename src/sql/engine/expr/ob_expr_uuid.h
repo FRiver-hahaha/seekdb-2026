@@ -18,6 +18,7 @@
 #define SRC_SQL_ENGINE_EXPR_OB_EXPR_UUID_H_
 
 #include "sql/engine/expr/ob_expr_operator.h"
+#include "sql/engine/expr/ob_uuid_node.h"
 
 namespace oceanbase
 {
@@ -32,14 +33,6 @@ public:
 private :
   //disallow copy
   DISALLOW_COPY_AND_ASSIGN(ObBigEndian);
-};
-
-struct ObUUIDNode
-{
-  ObUUIDNode();
-  int init();
-  unsigned char mac_addr_[6];
-  bool is_inited_;
 };
 
 class ObUUIDTime
