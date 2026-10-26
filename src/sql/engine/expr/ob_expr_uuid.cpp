@@ -35,6 +35,9 @@
 #include <linux/if_packet.h>
 #include <fcntl.h>
 #include <unistd.h>
+#else
+#include <fcntl.h>
+#include <unistd.h>
 #endif
 #endif
 #include "sql/engine/expr/ob_expr_uuid.h"
@@ -81,6 +84,39 @@ ObUUIDNode::ObUUIDNode()
   (void)init();
 }
 
+
+#if !defined(_WIN32) && !defined(__EMSCRIPTEN__) && !defined(__APPLE__)
+/*
+ * RFC 4122 section 4.5 allows a random 48-bit node ID with the multicast bit
+ * set when no hardware MAC address is available, so a node ID generated this
+ * way can never collide with a real MAC address.
+ *
+ * Restricted environments (for example a container without permission to read
+ * link-layer addresses) can reject SIOCGIFCONF or SIOCGIFHWADDR, which used to
+ * make server startup fail with -4016 in "init sql expr static var".
+ */
+static int generate_random_uuid_node(unsigned char *node)
+{
+  int ret = OB_SUCCESS;
+  if (OB_ISNULL(node)) {
+    ret = OB_INVALID_ARGUMENT;
+    LOG_WARN("invalid argument, node is null", K(ret), KP(node));
+  } else {
+    int fd = ::open("/dev/urandom", O_RDONLY);
+    ssize_t nread = (fd >= 0) ? ::read(fd, node, 6) : -1;
+    if (fd >= 0) {
+      ::close(fd);
+    }
+    if (6 != nread) {
+      ret = OB_ERR_UNEXPECTED;
+      LOG_WARN("failed to read random bytes for uuid node id", K(ret), K(errno));
+    } else {
+      node[0] |= 0x01;  // set multicast bit, same convention as the Android fallback
+    }
+  }
+  return ret;
+}
+#endif
 
 /*
  * get and set mac address
@@ -208,39 +244,57 @@ int ObUUIDNode::init()
     ret = OB_ERR_UNEXPECTED;
     LOG_ERROR("socket failed", K(ret), K(errno));
   } else {
+    bool mac_addr_found = false;
+    int candidate_cnt = 0;
+    int last_errno = 0;
     ifc.ifc_len = sizeof(buf);
     ifc.ifc_buf = buf;
     if (ioctl(sock, SIOCGIFCONF, &ifc) < 0) {
-      ret = OB_ERR_UNEXPECTED;
+      last_errno = errno;
+      // Keep going: an interface enumeration failure is exactly the case the
+      // random node id fallback below is meant to handle.
+      LOG_WARN("ioctl failed, SIOCGIFCONF: unable to enumerate network interfaces",
+               K(errno), K(last_errno));
     } else {
       ifreq *it = ifc.ifc_req;
       ifreq *end = it + (ifc.ifc_len / sizeof(ifreq));
-      bool mac_addr_found = false;
-      for (; it != end && OB_SUCC(ret); ++it) {
+      for (; it != end; ++it) {
         if (OB_ISNULL(it) || OB_ISNULL(it->ifr_name) || OB_ISNULL(ifr.ifr_name)) {
           continue;
         } else {
           strncpy(ifr.ifr_name, it->ifr_name, IFNAMSIZ - 1);
           if (ioctl(sock, SIOCGIFFLAGS, &ifr) == 0) {
             if (!(ifr.ifr_flags & IFF_LOOPBACK)) {
+              ++candidate_cnt;
               if (ioctl(sock, SIOCGIFHWADDR, &ifr) == 0) {
                 MEMCPY(mac_addr_, ifr.ifr_hwaddr.sa_data, 6);
                 mac_addr_found = true;
                 break;
               } else {
+                last_errno = errno;
                 LOG_WARN("ioctl failed, SIOCGIFHWADDR", K(errno), K(it->ifr_name));
               }
             }
           } else {
+            last_errno = errno;
             LOG_WARN("ioctl failed, SIOCGIFFLAGS", K(errno), K(it->ifr_name));
           }
         }
       }//end for
-      if (OB_FAIL(ret)) {
-      } else if (!mac_addr_found) {
-        ret = OB_ERR_UNEXPECTED;
+    }
+    if (mac_addr_found) {
+      is_inited_ = true;
+    } else {
+      // Do not abort startup: fall back to a random RFC 4122 node id and keep
+      // enough diagnostic information to explain why no MAC was usable.
+      LOG_WARN("no usable hardware MAC address for uuid node, falling back to random node id",
+               K(candidate_cnt), K(last_errno));
+      if (OB_FAIL(generate_random_uuid_node(mac_addr_))) {
+        LOG_ERROR("failed to generate random uuid node id", K(ret));
       } else {
         is_inited_ = true;
+        LOG_INFO("using random uuid node id (no MAC address available)",
+                 K(candidate_cnt), K(last_errno));
       }
     }
     close(sock);
