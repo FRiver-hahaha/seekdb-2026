@@ -2694,17 +2694,18 @@ int ObRawExprUtils::try_add_cast_expr_above(ObRawExprFactory *expr_factory,
                   && (dst_type.is_character_type() || dst_type.is_null()))
             || (src_type.is_character_type() && dst_type.is_character_type())))
       {
-      ret = OB_ERR_UNEXPECTED;
-#ifdef DEBUG
-      LOG_ERROR("try to add implicit cast again, check if type deduction is correct",
-                K(ret), K(expr), K(dst_type),
+      // The operand already carries an implicit cast whose result type differs from
+      // the required destination type. Casting it again is still a correct
+      // conversion (cast(cast(x as t1) as t2)), and deducing an expression that has
+      // already been deduced legitimately asks for it, for example:
+      //   SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x')));
+      // used to abort the statement with -4016 here. Keep the conversion and only
+      // trace it instead of failing the statement with an unexpected error.
+      LOG_TRACE("add implicit cast above an implicit cast",
+                K(expr), K(dst_type), K(src_type), K(ignore_dup_cast_error),
                 K(session->get_current_query_string()));
-#else
-      LOG_WARN("try to add implicit cast again, check if type deduction is correct",
-                K(ret), K(expr), K(dst_type), K(src_type), K(ignore_dup_cast_error),
-                K(session->get_current_query_string()));
-#endif
-    } else {
+    }
+    {
       //setup implicit cast charset convert ignore error
       ObCastMode cm_zf = cm;
       if ((cm_zf & CM_COLUMN_CONVERT) != 0) {
