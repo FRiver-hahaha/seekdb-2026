@@ -2694,17 +2694,25 @@ int ObRawExprUtils::try_add_cast_expr_above(ObRawExprFactory *expr_factory,
                   && (dst_type.is_character_type() || dst_type.is_null()))
             || (src_type.is_character_type() && dst_type.is_character_type())))
       {
-      ret = OB_ERR_UNEXPECTED;
-#ifdef DEBUG
-      LOG_ERROR("try to add implicit cast again, check if type deduction is correct",
-                K(ret), K(expr), K(dst_type),
-                K(session->get_current_query_string()));
-#else
-      LOG_WARN("try to add implicit cast again, check if type deduction is correct",
-                K(ret), K(expr), K(dst_type), K(src_type), K(ignore_dup_cast_error),
-                K(session->get_current_query_string()));
-#endif
-    } else {
+      // The expression already carries an implicit cast that was added for an
+      // operand context. This happens when a rewrite pass changes the shape of
+      // an expression, for example when a pair of NOT operators is replaced by
+      // the boolean form of its operand, and the type deduction runs again on
+      // the rewritten expression. The deduced destination type may then differ
+      // from the type produced by the existing cast, so a second implicit cast
+      // is requested above the first one.
+      //
+      // Failing here turns a valid statement into ERROR 4016 (HY000): Internal
+      // error, see issue #1477. The new cast converts the *result* of the
+      // existing cast, therefore stacking the two casts keeps the value
+      // semantics of the rewritten expression. Keep a warning for diagnosis
+      // instead of rejecting the statement.
+      LOG_WARN("try to add implicit cast above an existing implicit cast, "
+               "stack the new cast above the existing one",
+               K(expr), K(dst_type), K(src_type), K(ignore_dup_cast_error),
+               K(session->get_current_query_string()));
+    }
+    {
       //setup implicit cast charset convert ignore error
       ObCastMode cm_zf = cm;
       if ((cm_zf & CM_COLUMN_CONVERT) != 0) {

@@ -1,0 +1,37 @@
+# owner: oceanbase
+# owner group: shenzhen
+# tags: optimizer
+# description: >
+#   IFNULL with a boolean scalar subquery and a double negated LIKE predicate
+#   failed with ERROR 4016 (HY000): Internal error during SQL rewrite type
+#   deduction, see issue #1477.
+#
+#   The type deduction visited the rewritten condition more than once. The
+#   scalar subquery already carried an implicit cast that was added for the
+#   operand context of IFNULL. When the pair of NOT operators was replaced by
+#   the boolean form of its operand, the deduced destination type changed, and
+#   a second implicit cast was requested above the existing one. The duplicate
+#   cast was rejected with OB_ERR_UNEXPECTED (-4016), which made the whole
+#   statement fail.
+
+--disable_query_log
+set @@session.explicit_defaults_for_timestamp=off;
+--enable_query_log
+
+# the statement below used to fail with ERROR 4016 (HY000): Internal error
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x')));
+
+# control: a single negation is not rewritten into a boolean form
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE 'x'));
+
+# control: a literal instead of a scalar subquery
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE 'x')));
+
+# the double negation may also be the first argument of IFNULL
+SELECT IFNULL(!(!(1 LIKE '1')), (SELECT FALSE)) AS val;
+
+# three valued logic: a NULL operand keeps the NULL result
+SELECT IFNULL((SELECT NULL), !(!(NULL LIKE 'x'))) AS val;
+
+# a longer chain of NOT operators is handled the same way
+SELECT IFNULL((SELECT NULL), !(!(!(!(1 LIKE '1'))))) AS val;
