@@ -355,6 +355,7 @@ cc_library(
         "common/ob_role.h",
         "common/ob_role_mgr.h",
         "common/ob_simple_iterator.h",
+        "common/ob_sql_identifier.h",
         "common/ob_store_format.h",
         "common/ob_store_range.h",
         "common/ob_string_buf.h",

@@ -1,0 +1,27 @@
+DROP TABLE IF EXISTS ddl_identifier_enum;
+DROP TABLE IF EXISTS ddl_identifier_set;
+DROP TABLE IF EXISTS ddl_identifier_plain;
+CREATE TABLE ddl_identifier_enum (`e``n` ENUM('first','second') NOT NULL);
+INSERT INTO ddl_identifier_enum VALUES ('first'), ('second');
+CREATE UNIQUE INDEX idx_enum ON ddl_identifier_enum (`e``n`);
+SELECT `e``n` FROM ddl_identifier_enum ORDER BY `e``n`;
+e`n
+first
+second
+CREATE TABLE ddl_identifier_set (`s``n` SET('first','second') NOT NULL);
+INSERT INTO ddl_identifier_set VALUES ('first'), ('second');
+CREATE UNIQUE INDEX idx_set ON ddl_identifier_set (`s``n`);
+SELECT `s``n` FROM ddl_identifier_set ORDER BY `s``n`;
+s`n
+first
+second
+CREATE TABLE ddl_identifier_plain (`plain_name` INT NOT NULL);
+INSERT INTO ddl_identifier_plain VALUES (1), (2);
+CREATE UNIQUE INDEX idx_plain ON ddl_identifier_plain (`plain_name`);
+SELECT `plain_name` FROM ddl_identifier_plain ORDER BY `plain_name`;
+plain_name
+1
+2
+DROP TABLE ddl_identifier_enum;
+DROP TABLE ddl_identifier_set;
+DROP TABLE ddl_identifier_plain;
