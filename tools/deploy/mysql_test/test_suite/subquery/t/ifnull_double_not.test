@@ -1,0 +1,71 @@
+# Issue #1477: simplifying NOT must preserve its result type in value expressions.
+--disable_warnings
+DROP TABLE IF EXISTS t_double_not, t_double_not_range;
+--enable_warnings
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE "x")));
+
+# Controls from the issue.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE "x"));
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE "x")));
+
+# Non-NULL, NULL and longer NOT chains.
+SELECT 1 FROM dual WHERE IFNULL((SELECT TRUE), !(!(1 LIKE "x")));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!('x' LIKE 'x')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(NULL LIKE 'x')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(!(!(1 LIKE "x")))));
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(!(1 LIKE "x"))));
+
+# Exercise runtime values and correlated scalar subqueries, including NULL.
+CREATE TABLE t_double_not (id INT PRIMARY KEY, b INT, s VARCHAR(8), n INT);
+INSERT INTO t_double_not VALUES
+  (1, NULL, 'x', 2), (2, NULL, 'y', 0), (3, NULL, NULL, -2),
+  (4, 0, 'x', NULL), (5, 1, 'y', 3);
+SELECT id, IFNULL((SELECT b), !(!(s LIKE 'x'))) AS v
+FROM t_double_not ORDER BY id;
+SELECT id FROM t_double_not
+WHERE IFNULL((SELECT b), !(!(s LIKE 'x'))) ORDER BY id;
+SELECT id, IFNULL((SELECT b), !(!n)) AS v
+FROM t_double_not ORDER BY id;
+SELECT id FROM t_double_not WHERE IFNULL((SELECT b), !(!n)) ORDER BY id;
+
+# The double NOT can also be the first argument of IFNULL. Use a nullable
+# operand so that IFNULL itself is not removed by the not-null simplification.
+SELECT id FROM t_double_not
+WHERE IFNULL(!(!(s LIKE 'x')), FALSE) ORDER BY id;
+SELECT id FROM t_double_not
+WHERE IFNULL(!(!(s LIKE 'x')), (SELECT FALSE)) ORDER BY id;
+SELECT id, IFNULL(!(!(s LIKE 'x')), FALSE) AS v
+FROM t_double_not ORDER BY id;
+SELECT id, IFNULL(!(!(s LIKE 'x')), (SELECT FALSE)) AS v
+FROM t_double_not ORDER BY id;
+
+# Value contexts nested under CASE, comparisons and logical operators.
+SELECT id FROM t_double_not
+WHERE IFNULL((SELECT b), CASE WHEN 1 THEN !(!(s LIKE 'x')) ELSE 0 END) ORDER BY id;
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE "x"))) = 0;
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE "x"))) AND 1;
+SELECT 1 FROM dual WHERE NOT IFNULL((SELECT FALSE), !(!(1 LIKE "x")));
+
+# Reuse the prepared statement with false, true and NULL subquery results.
+PREPARE double_not_stmt FROM
+  'SELECT 1 FROM dual WHERE IFNULL((SELECT ?), !(!(? LIKE ?)))';
+SET @b = 0, @s = 'x', @p = 'x';
+EXECUTE double_not_stmt USING @b, @s, @p;
+SET @b = 1;
+EXECUTE double_not_stmt USING @b, @s, @p;
+SET @b = NULL;
+EXECUTE double_not_stmt USING @b, @s, @p;
+SET @s = 'y';
+EXECUTE double_not_stmt USING @b, @s, @p;
+DEALLOCATE PREPARE double_not_stmt;
+DROP TABLE t_double_not;
+
+# Predicate contexts must retain LIKE range extraction after eliminating NOT.
+CREATE TABLE t_double_not_range (id INT PRIMARY KEY, s VARCHAR(8), KEY idx_s(s));
+--replace_regex /rowset=[0-9]+/rowset=N/ /(?m) +$//
+EXPLAIN BASIC SELECT id FROM t_double_not_range FORCE INDEX(idx_s)
+WHERE !(!(s LIKE 'x%'));
+--replace_regex /rowset=[0-9]+/rowset=N/ /(?m) +$//
+EXPLAIN BASIC SELECT id FROM t_double_not_range FORCE INDEX(idx_s)
+WHERE !(!(s LIKE 'x%')) AND id > 0;
+DROP TABLE t_double_not_range;

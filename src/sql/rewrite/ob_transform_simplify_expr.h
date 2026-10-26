@@ -167,9 +167,11 @@ private:
                bool &trans_happened);
   int recursive_push_not(ObRawExpr *&expr,
                          hash::ObHashMap<uint64_t, ObRawExpr *> &push_expr_map,
+                         const bool is_bool_context,
                          bool &trans_happened);
   int do_push_not(ObRawExpr *&expr,
                   hash::ObHashMap<uint64_t, ObRawExpr *> &push_expr_map,
+                  const bool is_bool_context,
                   bool &trans_happened);
   int reverse_cmp_type_of_align_date4cmp(ObRawExpr* expr,
                                          ObRawExprFactory *expr_factory,

@@ -1273,12 +1273,20 @@ int ObTransformSimplifyExpr::inner_remove_dummy_nvl(ObDMLStmt *stmt,
         }
       }
       if (OB_SUCC(ret) && not_cnt > 1 && 0 == not_cnt % 2) {
+        // The first argument of NVL/IFNULL is a value context. NOT returns INT32,
+        // but the simplified operand (e.g. LIKE) can return INT64. Preserve the
+        // original type to keep the parent type deduction stable.
         ObRawExpr *new_child = NULL;
         if (OB_FAIL(ObRawExprUtils::try_create_bool_expr(cur, new_child, *ctx_->expr_factory_))) {
         } else if (OB_ISNULL(new_child)) {
           ret = OB_ERR_UNEXPECTED;
           LOG_WARN("unexpected null bool expr", K(ret));
         } else if (OB_FAIL(new_child->formalize(ctx_->session_info_))) {
+        } else if (OB_FAIL(ObRawExprUtils::try_add_cast_expr_above(ctx_->expr_factory_,
+                                                                   ctx_->session_info_,
+                                                                   *new_child,
+                                                                   child_0->get_result_type(),
+                                                                   new_child))) {
         } else {
           op_expr->get_param_expr(0) = new_child;
           if (OB_FAIL(expr->formalize(ctx_->session_info_))) {
@@ -2300,7 +2308,7 @@ int ObTransformSimplifyExpr::push_not(ObIArray<ObRawExpr*> &conditions, bool &tr
       ret = OB_ERR_UNEXPECTED;
     } else if (!child_expr->has_flag(CNT_NOT)) {
      //do nothing
-    } else if (OB_FAIL(recursive_push_not(child_expr, push_expr_map, trans_happened))) {
+    } else if (OB_FAIL(recursive_push_not(child_expr, push_expr_map, true, trans_happened))) {
     } else {/*do nothing*/}
   }
   if (OB_SUCC(ret) && trans_happened) {
@@ -2312,6 +2320,7 @@ int ObTransformSimplifyExpr::push_not(ObIArray<ObRawExpr*> &conditions, bool &tr
 
 int ObTransformSimplifyExpr::recursive_push_not(ObRawExpr *&expr,
                                                 hash::ObHashMap<uint64_t, ObRawExpr *> &push_expr_map,
+                                                const bool is_bool_context,
                                                 bool &trans_happened)
 {
   int ret = OB_SUCCESS;
@@ -2319,15 +2328,22 @@ int ObTransformSimplifyExpr::recursive_push_not(ObRawExpr *&expr,
     ret = OB_ERR_UNEXPECTED;
   } else if (!expr->has_flag(IS_NOT)) {
     //do nothing
-  } else if (OB_FAIL(do_push_not(expr, push_expr_map, trans_happened))) {
+  } else if (OB_FAIL(do_push_not(expr, push_expr_map, is_bool_context, trans_happened))) {
   }
   for (int64_t i = 0; OB_SUCC(ret) && i < expr->get_param_count(); i++) {
     ObRawExpr *&child_expr = expr->get_param_expr(i);
+    const ObItemType expr_type = expr->get_expr_type();
+    const bool child_is_bool_context = T_OP_AND == expr_type || T_OP_OR == expr_type ||
+                                       T_OP_XOR == expr_type || T_OP_NOT == expr_type ||
+                                       T_OP_BOOL == expr_type;
     if (OB_ISNULL(child_expr)) {
       ret = OB_ERR_UNEXPECTED;
     } else if (!child_expr->has_flag(CNT_NOT)) {
       //do nothing
-    } else if (OB_FAIL(SMART_CALL(recursive_push_not(child_expr, push_expr_map, trans_happened)))) {
+    } else if (OB_FAIL(SMART_CALL(recursive_push_not(child_expr,
+                                                    push_expr_map,
+                                                    child_is_bool_context,
+                                                    trans_happened)))) {
     } else {/*do nothing*/}
   }
   return ret;
@@ -2335,6 +2351,7 @@ int ObTransformSimplifyExpr::recursive_push_not(ObRawExpr *&expr,
 
 int ObTransformSimplifyExpr::do_push_not(ObRawExpr *&expr,
                                          hash::ObHashMap<uint64_t, ObRawExpr *> &push_expr_map,
+                                         const bool is_bool_context,
                                          bool &trans_happened)
 {
   int ret = OB_SUCCESS;
@@ -2377,11 +2394,17 @@ int ObTransformSimplifyExpr::do_push_not(ObRawExpr *&expr,
     } else {
       // size of not is even
       // not(not c1 > 1)) -> c1>1
+      // NOT returns INT32, but a boolean operand such as LIKE can return INT64.
+      // Preserve its type in value contexts, but leave predicates unwrapped so
+      // that range extraction can still recognize them.
       ObRawExpr *temp = NULL;
       if (OB_FAIL(ObRawExprUtils::try_create_bool_expr(cur, temp, *expr_factory))) {
       } else if (OB_ISNULL(temp)) {
         ret = OB_ERR_UNEXPECTED;
       } else if (OB_FAIL(temp->formalize(ctx_->session_info_))) {
+      } else if (!is_bool_context &&
+                 OB_FAIL(ObRawExprUtils::try_add_cast_expr_above(
+                   expr_factory, ctx_->session_info_, *temp, expr->get_result_type(), temp))) {
       } else {
         expr = temp;
         is_valid = false;
