@@ -2277,6 +2277,8 @@ int ObTransformSimplifyExpr::do_canonicalize(ObDMLStmt *stmt, ObIArray<ObRawExpr
       for (int64_t i = 0; OB_SUCC(ret) && i < conditions.count(); ++i) {
         if (OB_ISNULL(conditions.at(i))) {
           ret = OB_ERR_UNEXPECTED;
+        } else if (OB_FAIL(ObRawExprUtils::erase_operand_implicit_cast(
+                               conditions.at(i), conditions.at(i)))) {
         } else if (OB_FAIL(conditions.at(i)->formalize(ctx_->session_info_))) {
         }
       }
