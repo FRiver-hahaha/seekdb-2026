@@ -1,0 +1,21 @@
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+
+package(default_testonly = True)
+
+cc_test(
+    name = "test_uuid_node_linux",
+    srcs = [
+        "test_uuid_node_linux.cpp",
+        "//src/sql:engine/expr/uuid_node_linux.h",
+    ],
+    linkopts = [
+        "-Wl,--wrap=socket",
+        "-Wl,--wrap=ioctl",
+        "-Wl,--wrap=open",
+        "-Wl,--wrap=read",
+        "-Wl,--wrap=__read_chk",
+        "-Wl,--wrap=close",
+    ],
+    deps = ["//bazel/third_party:gtest"],
+    target_compatible_with = ["@platforms//os:linux"],
+)

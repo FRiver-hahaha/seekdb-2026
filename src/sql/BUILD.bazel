@@ -36,6 +36,12 @@ load(
 
 package(default_visibility = ["//visibility:private"])
 
+# Exercise the POSIX UUID-node implementation without linking the SQL runtime.
+exports_files(
+    ["engine/expr/uuid_node_linux.h"],
+    visibility = ["//unittest/sql:__pkg__"],
+)
+
 _SQL_RUNTIME_ONLY_SHARE_DEPS = [
     "//src/share:checksum_persistence",
     "//src/share:cluster_metadata_persistence",
