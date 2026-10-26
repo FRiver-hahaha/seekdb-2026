@@ -1,0 +1,25 @@
+# Regression for issue #1477: preserve the result type of eliminated NOT chains.
+# Includes the original reproducer, its controls, NULLs, and non-boolean operands.
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x')));
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE 'x'));
+SELECT 1 AS matched FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE 'x')));
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT TRUE), !(!('a' LIKE 'a')));
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!('a' LIKE 'a')));
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!('a' LIKE 'b')));
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!(NULL LIKE 'a'))) IS NULL;
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT TRUE), !(!(!(!('a' LIKE 'a')))));
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!(2))) = 1;
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!('2'))) = 1;
+SELECT 1 AS matched FROM dual WHERE IFNULL(!(!('a' LIKE 'a')), (SELECT NULL));
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT TRUE), !(!(1 = 1)));
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT 1 WHERE FALSE), !(!('a' LIKE 'a')));
+PREPARE stmt1477 FROM 'SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE ''x'')))';
+EXECUTE stmt1477;
+DEALLOCATE PREPARE stmt1477;
+SELECT 1 AS matched FROM dual WHERE IFNULL(!(!('a' LIKE 'a')), (SELECT FALSE));
+SELECT 1 AS matched FROM dual WHERE IFNULL(!(!('a' LIKE 'a')), (SELECT TRUE));
+SELECT 1 AS matched FROM dual WHERE IFNULL(!(!('a' LIKE 'b')), (SELECT TRUE));
+SELECT 1 AS matched FROM dual WHERE IFNULL(!(!(NULL LIKE 'a')), (SELECT TRUE));
+SELECT 1 AS matched FROM dual WHERE IFNULL(!(!(!(!('a' LIKE 'a')))), (SELECT FALSE));
+SELECT id FROM (SELECT 1 AS id, 'a' AS value UNION ALL SELECT 2, 'b' UNION ALL SELECT 3, NULL) AS values_to_check WHERE IFNULL(!(!(value LIKE 'a')), (SELECT TRUE)) ORDER BY id;
+SELECT id FROM (SELECT 1 AS id, 'a' AS value UNION ALL SELECT 2, 'b' UNION ALL SELECT 3, NULL) AS values_to_check WHERE IFNULL(!(!(value LIKE 'a')), (SELECT FALSE)) ORDER BY id;

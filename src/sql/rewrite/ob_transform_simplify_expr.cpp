@@ -26,6 +26,36 @@ using namespace oceanbase::sql;
 
 namespace
 {
+int create_bool_expr_preserving_type(ObRawExpr *input_expr,
+                                     const ObRawExprResType &result_type,
+                                     ObRawExprFactory &expr_factory,
+                                     const ObSQLSessionInfo *session_info,
+                                     ObRawExpr *&bool_expr)
+{
+  int ret = OB_SUCCESS;
+  bool_expr = NULL;
+  if (OB_FAIL(ObRawExprUtils::try_create_bool_expr(input_expr, bool_expr, expr_factory))) {
+  } else if (OB_ISNULL(bool_expr)) {
+    ret = OB_ERR_UNEXPECTED;
+    LOG_WARN("unexpected null bool expr", K(ret));
+  } else if (OB_FAIL(bool_expr->formalize(session_info))) {
+  } else if (bool_expr->get_result_type().get_type() != result_type.get_type()) {
+    // Removing NOT can expose a boolean operand with a different integer type.
+    // Preserve the result type used when its parent was originally formalized.
+    ObSysFunRawExpr *cast_expr = NULL;
+    if (OB_FAIL(ObRawExprUtils::create_cast_expr(
+            expr_factory, bool_expr, result_type, cast_expr, session_info))) {
+    } else if (OB_ISNULL(cast_expr)) {
+      ret = OB_ERR_UNEXPECTED;
+      LOG_WARN("unexpected null cast expr", K(ret));
+    } else if (OB_FAIL(cast_expr->formalize(session_info))) {
+    } else {
+      bool_expr = cast_expr;
+    }
+  }
+  return ret;
+}
+
 int has_scalar_in_predicate(ObRawExpr *expr, bool &has_in)
 {
   int ret = OB_SUCCESS;
@@ -1274,11 +1304,9 @@ int ObTransformSimplifyExpr::inner_remove_dummy_nvl(ObDMLStmt *stmt,
       }
       if (OB_SUCC(ret) && not_cnt > 1 && 0 == not_cnt % 2) {
         ObRawExpr *new_child = NULL;
-        if (OB_FAIL(ObRawExprUtils::try_create_bool_expr(cur, new_child, *ctx_->expr_factory_))) {
-        } else if (OB_ISNULL(new_child)) {
-          ret = OB_ERR_UNEXPECTED;
-          LOG_WARN("unexpected null bool expr", K(ret));
-        } else if (OB_FAIL(new_child->formalize(ctx_->session_info_))) {
+        if (OB_FAIL(create_bool_expr_preserving_type(
+                cur, child_0->get_result_type(), *ctx_->expr_factory_,
+                ctx_->session_info_, new_child))) {
         } else {
           op_expr->get_param_expr(0) = new_child;
           if (OB_FAIL(expr->formalize(ctx_->session_info_))) {
@@ -2378,10 +2406,8 @@ int ObTransformSimplifyExpr::do_push_not(ObRawExpr *&expr,
       // size of not is even
       // not(not c1 > 1)) -> c1>1
       ObRawExpr *temp = NULL;
-      if (OB_FAIL(ObRawExprUtils::try_create_bool_expr(cur, temp, *expr_factory))) {
-      } else if (OB_ISNULL(temp)) {
-        ret = OB_ERR_UNEXPECTED;
-      } else if (OB_FAIL(temp->formalize(ctx_->session_info_))) {
+      if (OB_FAIL(create_bool_expr_preserving_type(
+              cur, expr->get_result_type(), *expr_factory, ctx_->session_info_, temp))) {
       } else {
         expr = temp;
         is_valid = false;

@@ -1,0 +1,60 @@
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x')));
+matched
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE 'x'));
+matched
+SELECT 1 AS matched FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE 'x')));
+matched
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT TRUE), !(!('a' LIKE 'a')));
+matched
+1
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!('a' LIKE 'a')));
+matched
+1
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!('a' LIKE 'b')));
+matched
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!(NULL LIKE 'a'))) IS NULL;
+matched
+1
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT TRUE), !(!(!(!('a' LIKE 'a')))));
+matched
+1
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!(2))) = 1;
+matched
+1
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!('2'))) = 1;
+matched
+1
+SELECT 1 AS matched FROM dual WHERE IFNULL(!(!('a' LIKE 'a')), (SELECT NULL));
+matched
+1
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT TRUE), !(!(1 = 1)));
+matched
+1
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT 1 WHERE FALSE), !(!('a' LIKE 'a')));
+matched
+1
+PREPARE stmt1477 FROM 'SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE ''x'')))';
+EXECUTE stmt1477;
+matched
+DEALLOCATE PREPARE stmt1477;
+SELECT 1 AS matched FROM dual WHERE IFNULL(!(!('a' LIKE 'a')), (SELECT FALSE));
+matched
+1
+SELECT 1 AS matched FROM dual WHERE IFNULL(!(!('a' LIKE 'a')), (SELECT TRUE));
+matched
+1
+SELECT 1 AS matched FROM dual WHERE IFNULL(!(!('a' LIKE 'b')), (SELECT TRUE));
+matched
+SELECT 1 AS matched FROM dual WHERE IFNULL(!(!(NULL LIKE 'a')), (SELECT TRUE));
+matched
+1
+SELECT 1 AS matched FROM dual WHERE IFNULL(!(!(!(!('a' LIKE 'a')))), (SELECT FALSE));
+matched
+1
+SELECT id FROM (SELECT 1 AS id, 'a' AS value UNION ALL SELECT 2, 'b' UNION ALL SELECT 3, NULL) AS values_to_check WHERE IFNULL(!(!(value LIKE 'a')), (SELECT TRUE)) ORDER BY id;
+id
+1
+3
+SELECT id FROM (SELECT 1 AS id, 'a' AS value UNION ALL SELECT 2, 'b' UNION ALL SELECT 3, NULL) AS values_to_check WHERE IFNULL(!(!(value LIKE 'a')), (SELECT FALSE)) ORDER BY id;
+id
+1
