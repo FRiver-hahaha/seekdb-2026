@@ -402,6 +402,7 @@ psmall_test=[
 'storage.rowkey_is_null',
 'subquery.idx_with_const_expr_21_subquery_dilang',
 'subquery.optimizer_subquery_bug',
+'subquery.ifnull_not_type_contract',
 'subquery.order_by_subquery',
 'subquery.rqg_ob_subquery_semijoin_nested_sql_parameterization',
 'subquery.rqg_subquery_materialization_oop',

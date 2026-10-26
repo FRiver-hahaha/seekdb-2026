@@ -1,0 +1,40 @@
+# Issue #1477: removing an even NOT chain must preserve its result type.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE 'x'));
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE 'x')));
+
+# Exercise the IFNULL first-argument simplifier as well as predicate push_not.
+SELECT IFNULL(!(!(1 LIKE '1')), (SELECT FALSE)) AS result;
+SELECT IFNULL((SELECT NULL), !(!(NULL LIKE 'x'))) AS result;
+SELECT IFNULL((SELECT NULL), !(!(!(!(1 LIKE '1'))))) AS result;
+SELECT IFNULL((SELECT NULL), !(!(-2))) AS result;
+
+--disable_warnings
+DROP TABLE IF EXISTS t_ifnull_not_contract;
+--enable_warnings
+CREATE TABLE t_ifnull_not_contract(id INT PRIMARY KEY, label VARCHAR(10), n INT);
+INSERT INTO t_ifnull_not_contract VALUES
+  (1, 'alpha', -2), (2, 'beta', 0), (3, NULL, NULL), (4, 'amber', 2);
+
+# Nonconstant operands prevent a constant-only workaround. NULL must remain
+# UNKNOWN until IFNULL applies its fallback, and every nonzero value is true.
+SELECT id FROM t_ifnull_not_contract
+WHERE IFNULL((SELECT NULL), !(!(label LIKE 'a%'))) ORDER BY id;
+SELECT id, IFNULL(!(!(label LIKE 'a%')), (SELECT FALSE)) AS matches,
+       IFNULL((SELECT NULL), !(!(n))) AS nonzero
+FROM t_ifnull_not_contract ORDER BY id;
+SELECT id FROM t_ifnull_not_contract
+WHERE IFNULL((SELECT FALSE), !(!(label LIKE 'a%'))) ORDER BY id;
+
+# Re-executing the same prepared shape with true, false and NULL operands must
+# not leave stale operand casts or turn UNKNOWN into FALSE.
+PREPARE p_ifnull_not FROM
+  'SELECT IFNULL((SELECT NULL), !(!(? LIKE ?))) AS result';
+SET @subject = 'alpha', @pattern = 'a%';
+EXECUTE p_ifnull_not USING @subject, @pattern;
+SET @subject = 'beta';
+EXECUTE p_ifnull_not USING @subject, @pattern;
+SET @subject = NULL;
+EXECUTE p_ifnull_not USING @subject, @pattern;
+DEALLOCATE PREPARE p_ifnull_not;
+DROP TABLE t_ifnull_not_contract;
