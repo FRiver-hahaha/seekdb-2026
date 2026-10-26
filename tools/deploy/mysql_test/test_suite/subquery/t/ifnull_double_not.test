@@ -1,0 +1,27 @@
+# Issue #1477: eliminating double NOT must preserve its result type.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x')));
+
+# Controls: a single NOT and a literal first argument.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE 'x'));
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE 'x')));
+
+# Non-NULL scalar subqueries retain their value regardless of the fallback.
+SELECT 1 FROM dual WHERE IFNULL((SELECT TRUE), !(!(1 LIKE 'x')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE '1')));
+
+# NULL and empty scalar subqueries use the fallback, including SQL NULL.
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(1 LIKE '1')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(1 LIKE 'x')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE FROM dual WHERE FALSE), !(!(1 LIKE '1')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE FROM dual WHERE FALSE), !(!(1 LIKE 'x')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(NULL LIKE 'x')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT TRUE), !(!(NULL LIKE 'x')));
+
+# Longer NOT chains, other boolean operators, and numeric boolean conversion.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(!(!(1 LIKE 'x')))));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(!(1 LIKE 'x'))));
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 REGEXP 'x')));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(1 = 1)));
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(2))) = 1;
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(0))) = 0;
+SELECT 1 FROM dual WHERE IFNULL((SELECT NULL), !(!(NULL))) IS NULL;
