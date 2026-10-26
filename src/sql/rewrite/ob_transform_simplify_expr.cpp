@@ -2377,12 +2377,25 @@ int ObTransformSimplifyExpr::do_push_not(ObRawExpr *&expr,
     } else {
       // size of not is even
       // not(not c1 > 1)) -> c1>1
+      const ObRawExprResType result_type = expr->get_result_type();
       ObRawExpr *temp = NULL;
       if (OB_FAIL(ObRawExprUtils::try_create_bool_expr(cur, temp, *expr_factory))) {
       } else if (OB_ISNULL(temp)) {
         ret = OB_ERR_UNEXPECTED;
       } else if (OB_FAIL(temp->formalize(ctx_->session_info_))) {
-      } else {
+      } else if (temp->get_result_type().get_type() != result_type.get_type()) {
+        // Boolean predicates such as LIKE may use a wider integer type than NOT.
+        // Keep the parent's previously deduced operand types valid after replacement.
+        ObSysFunRawExpr *cast_expr = NULL;
+        if (OB_FAIL(ObRawExprUtils::create_cast_expr(*expr_factory, temp, result_type,
+                                                   cast_expr, ctx_->session_info_))) {
+        } else if (OB_ISNULL(cast_expr)) {
+          ret = OB_ERR_UNEXPECTED;
+        } else {
+          temp = cast_expr;
+        }
+      }
+      if (OB_SUCC(ret)) {
         expr = temp;
         is_valid = false;
         trans_happened = true;

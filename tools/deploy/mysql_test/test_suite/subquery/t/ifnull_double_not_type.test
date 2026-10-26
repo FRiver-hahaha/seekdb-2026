@@ -1,0 +1,33 @@
+--echo # Preserve IFNULL operand types when removing an even NOT chain
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x')));
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT TRUE), !(!(1 LIKE 'x')));
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!(1 LIKE 'x')));
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!(1 LIKE '1')));
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!(NULL LIKE 'x')));
+
+--echo # Existing one-NOT and literal forms retain their behavior
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE 'x'));
+SELECT 1 AS matched FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE 'x')));
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT FALSE), 1 LIKE 'x');
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 = 2)));
+SELECT IFNULL((SELECT FALSE), !(!(1 LIKE 'x'))) AS value;
+
+--echo # Longer even chains and HAVING use the same type-preserving rewrite
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT FALSE), !(!(!(!(1 LIKE 'x')))));
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT TRUE), !(!(!(!(1 LIKE 'x')))));
+SELECT 1 AS matched FROM dual HAVING IFNULL((SELECT TRUE), !(!(1 LIKE 'x')));
+
+--echo # Boolean conversion and NULL semantics are preserved
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!42));
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!0));
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!NULL));
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!(!(1 LIKE 'x'))));
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT 0.5), !(!(1 LIKE 'x')));
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT -1), !(!(1 LIKE 'x')));
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT '1'), !(!(1 LIKE 'x')));
+
+--echo # Repeated prepared execution must not accumulate operand casts
+PREPARE not_type_stmt FROM 'SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE ''x'')))';
+EXECUTE not_type_stmt;
+EXECUTE not_type_stmt;
+DEALLOCATE PREPARE not_type_stmt;

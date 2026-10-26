@@ -1,0 +1,61 @@
+# Preserve IFNULL operand types when removing an even NOT chain
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE 'x')));
+matched
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT TRUE), !(!(1 LIKE 'x')));
+matched
+1
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!(1 LIKE 'x')));
+matched
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!(1 LIKE '1')));
+matched
+1
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!(NULL LIKE 'x')));
+matched
+# Existing one-NOT and literal forms retain their behavior
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE 'x'));
+matched
+SELECT 1 AS matched FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE 'x')));
+matched
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT FALSE), 1 LIKE 'x');
+matched
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 = 2)));
+matched
+SELECT IFNULL((SELECT FALSE), !(!(1 LIKE 'x'))) AS value;
+value
+0
+# Longer even chains and HAVING use the same type-preserving rewrite
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT FALSE), !(!(!(!(1 LIKE 'x')))));
+matched
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT TRUE), !(!(!(!(1 LIKE 'x')))));
+matched
+1
+SELECT 1 AS matched FROM dual HAVING IFNULL((SELECT TRUE), !(!(1 LIKE 'x')));
+matched
+1
+# Boolean conversion and NULL semantics are preserved
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!42));
+matched
+1
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!0));
+matched
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!NULL));
+matched
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT NULL), !(!(!(1 LIKE 'x'))));
+matched
+1
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT 0.5), !(!(1 LIKE 'x')));
+matched
+1
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT -1), !(!(1 LIKE 'x')));
+matched
+1
+SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT '1'), !(!(1 LIKE 'x')));
+matched
+1
+# Repeated prepared execution must not accumulate operand casts
+PREPARE not_type_stmt FROM 'SELECT 1 AS matched FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE ''x'')))';
+EXECUTE not_type_stmt;
+matched
+EXECUTE not_type_stmt;
+matched
+DEALLOCATE PREPARE not_type_stmt;
