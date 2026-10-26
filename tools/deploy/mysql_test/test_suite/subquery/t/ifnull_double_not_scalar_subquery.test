@@ -1,0 +1,27 @@
+# owner group: SQL
+# tags: subquery, expression, type_deduction
+# description: IFNULL with a boolean scalar subquery and a collapsed even NOT chain
+#   must not fail with OB_ERR_UNEXPECTED. Regression test for oceanbase/seekdb#1477.
+
+# The exact statement from the issue. It used to fail with
+# ERROR 4016 (HY000): Internal error when the rewrite pass collapsed the pair of
+# NOT operators into the boolean form of its LIKE operand.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE "x")));
+
+# Control: a single negation is not collapsed and must keep returning no rows.
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE "x"));
+
+# Control: a literal instead of a scalar subquery.
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE "x")));
+
+# The value of the rewritten expression: FALSE subquery wins, so the result is 0.
+SELECT IFNULL((SELECT FALSE), !(!(1 LIKE "x"))) AS val;
+
+# Three-valued logic is preserved through the collapsed NOT chain.
+SELECT IFNULL((SELECT NULL), !(!('x' LIKE 'x'))) AS result;
+SELECT IFNULL((SELECT NULL), !(!('z' LIKE 'x'))) AS result;
+SELECT IFNULL((SELECT NULL), !(!(NULL LIKE 'x'))) AS result;
+SELECT IFNULL((SELECT TRUE), !(!('z' LIKE 'x'))) AS result;
+
+# A longer even NOT chain is collapsed the same way.
+SELECT IFNULL((SELECT NULL), !(!(!(!('x' LIKE 'x'))))) AS result;

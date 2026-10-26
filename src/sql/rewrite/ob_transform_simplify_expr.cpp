@@ -2382,6 +2382,15 @@ int ObTransformSimplifyExpr::do_push_not(ObRawExpr *&expr,
       } else if (OB_ISNULL(temp)) {
         ret = OB_ERR_UNEXPECTED;
       } else if (OB_FAIL(temp->formalize(ctx_->session_info_))) {
+      } else if (OB_FAIL(ObTransformUtils::add_cast_for_replace_if_need(
+                            *expr_factory, expr, temp, ctx_->session_info_))) {
+        // Eliminating an even chain of NOT operators replaces the NOT expression
+        // with its (possibly boolean-wrapped) operand. NOT and its operand can have
+        // different result types (for example NOT returns INT32 while LIKE returns
+        // BIGINT), so keep the result type of the replaced NOT expression on the
+        // replacement. Otherwise a later type re-deduction may try to add an implicit
+        // cast above an expression that already carries one and fail with
+        // OB_ERR_UNEXPECTED.
       } else {
         expr = temp;
         is_valid = false;

@@ -1,0 +1,21 @@
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(!(1 LIKE "x")));
+SELECT 1 FROM dual WHERE IFNULL((SELECT FALSE), !(1 LIKE "x"));
+SELECT 1 FROM dual WHERE IFNULL(FALSE, !(!(1 LIKE "x")));
+SELECT IFNULL((SELECT FALSE), !(!(1 LIKE "x"))) AS val;
+val
+0
+SELECT IFNULL((SELECT NULL), !(!('x' LIKE 'x'))) AS result;
+result
+1
+SELECT IFNULL((SELECT NULL), !(!('z' LIKE 'x'))) AS result;
+result
+0
+SELECT IFNULL((SELECT NULL), !(!(NULL LIKE 'x'))) AS result;
+result
+NULL
+SELECT IFNULL((SELECT TRUE), !(!('z' LIKE 'x'))) AS result;
+result
+1
+SELECT IFNULL((SELECT NULL), !(!(!(!('x' LIKE 'x'))))) AS result;
+result
+1
