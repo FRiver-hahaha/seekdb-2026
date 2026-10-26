@@ -2901,9 +2901,32 @@ int ObRawExprDeduceType::try_add_cast_expr_above_for_deduce_type(ObRawExpr &expr
                                                                  const ObCastMode &cm)
 {
   int ret = OB_SUCCESS;
+  // Re-deduction after a rewrite can change the type required by an operand.
+  // If that operand still has the implicit cast inserted by the previous
+  // deduction, derive the replacement cast from its original expression.
+  // This keeps the normal duplicate-cast check in try_add_cast_expr_above
+  // intact for first-time deduction and avoids changing numeric cast rules.
+  ObRawExpr *target = &expr;
+  if (T_FUN_SYS_CAST == target->get_expr_type()
+      && target->has_flag(IS_OP_OPERAND_IMPLICIT_CAST)) {
+    ObRawExpr *origin = NULL;
+    if (OB_UNLIKELY(target->get_param_count() <= 0)
+        || OB_ISNULL(target->get_param_expr(0))) {
+      ret = OB_ERR_UNEXPECTED;
+    } else if (OB_FAIL(ObRawExprUtils::erase_operand_implicit_cast(target, origin))) {
+      LOG_WARN("failed to erase operand implicit cast before re-deduction", K(ret));
+    } else if (OB_ISNULL(origin)) {
+      ret = OB_ERR_UNEXPECTED;
+    } else {
+      target = origin;
+    }
+  }
+  if (OB_FAIL(ret)) {
+    return ret;
+  }
   ObExprResType cast_dst_type;
   // cast child_res_type to cast_dst_type
-  const ObExprResType &child_res_type = expr.get_result_type();
+  const ObExprResType &child_res_type = target->get_result_type();
 
   // calc meta of dst_type is the real destination type!!!
   cast_dst_type.set_meta(dst_type.get_calc_meta());
@@ -2969,20 +2992,20 @@ int ObRawExprDeduceType::try_add_cast_expr_above_for_deduce_type(ObRawExpr &expr
     bool need_wrap = false;
     if (OB_ISNULL(session = const_cast<ObSQLSessionInfo *>(my_session_))) {
       ret = OB_ERR_UNEXPECTED;
-    } else if (OB_FAIL(ObRawExprUtils::need_wrap_to_string(expr.get_result_type(),
+    } else if (OB_FAIL(ObRawExprUtils::need_wrap_to_string(target->get_result_type(),
                                           cast_dst_type.get_type(), false, need_wrap, true))) {
     } else if (need_wrap) {
-      OZ(ObRawExprUtils::try_wrap_type_to_str(expr_factory_, my_session_, expr,
+      OZ(ObRawExprUtils::try_wrap_type_to_str(expr_factory_, my_session_, *target,
                                               cast_dst_type, new_expr));
     } else {
-      OZ(ObRawExprUtils::try_add_cast_expr_above(expr_factory_, my_session_, expr,
+      OZ(ObRawExprUtils::try_add_cast_expr_above(expr_factory_, my_session_, *target,
                                                  cast_dst_type, cm, new_expr,
                                                  my_local_vars_, local_vars_id_));
     }
   }
   ObRawExpr *e = new_expr;
   while (OB_SUCC(ret) && NULL != e &&
-         e != &expr && T_FUN_SYS_CAST == e->get_expr_type()) {
+         e != target && T_FUN_SYS_CAST == e->get_expr_type()) {
     if (OB_FAIL(e->add_flag(IS_OP_OPERAND_IMPLICIT_CAST))) {
     } else {
       e = e->get_param_expr(0);
