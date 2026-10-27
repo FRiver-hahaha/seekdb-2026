@@ -22,9 +22,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-typedef enum ObItemType
-{
-  T_INVALID = -1, //Attention: add a new type after T_INVALID
+typedef enum ObItemType {
+  T_INVALID = -1,  // Attention: add a new type after T_INVALID
 
   /* Literal data type tags, the same as ObObjType */
   // Although some of the following types are not used in the parser,
@@ -71,10 +70,10 @@ typedef enum ObItemType
   T_ENUM = 32,
   T_SET = 33,
 
-  T_JSON        = 36,
-  T_GEOMETRY    = 37,
+  T_JSON = 36,
+  T_GEOMETRY = 37,
   T_RESERVED_TYPE_38 = 38,
-  T_COLLECTION  = 40,
+  T_COLLECTION = 40,
 
   T_TIMESTAMP_TZ = 46,
   T_TIMESTAMP_LTZ = 47,
@@ -83,10 +82,10 @@ typedef enum ObItemType
   T_INTERVAL_YM = 50,
   T_INTERVAL_DS = 51,
   T_NUMBER_FLOAT = 52,
-  T_NVARCHAR2   = 53,
-  T_NCHAR       = 54,
-  T_UROWID      = 55,
-  T_LOB         = 56,
+  T_NVARCHAR2 = 53,
+  T_NCHAR = 54,
+  T_UROWID = 55,
+  T_LOB = 56,
 
   T_IEEE754_NAN = 61,
   T_IEEE754_INFINITE = 62,
@@ -98,7 +97,8 @@ typedef enum ObItemType
 
   T_REF_ALIAS_COLUMN = 88,
   T_REF_COLUMN = 89,
-  // @note !!! the values of the following tags between T_FUN_MAX and T_FUN_AVG SHOULD NOT be changed
+  // @note !!! the values of the following tags between T_FUN_MAX and T_FUN_AVG
+  // SHOULD NOT be changed
   /* Aggregate function tags */
   T_FUN_MAX = 90,
   T_FUN_MIN = 91,
@@ -111,20 +111,21 @@ typedef enum ObItemType
   T_FUN_APPROX_COUNT_DISTINCT_SYNOPSIS = 98,
   T_FUN_APPROX_COUNT_DISTINCT_SYNOPSIS_MERGE = 99,
 
-  // @note !!! the values of the following tags between T_MIN_OP and T_FUN_SYS SHOULD NOT be changed, new operator should be appended only
+  // @note !!! the values of the following tags between T_MIN_OP and T_FUN_SYS
+  // SHOULD NOT be changed, new operator should be appended only
   /* Operator tags */
-  T_MIN_OP = 100, /* 1. arithmetic operators */
-  T_OP_NEG = 101,   // negative
-  T_OP_POS = 102,   // positive
-  T_OP_ABS = 103,   // for abs
+  T_MIN_OP = 100,  /* 1. arithmetic operators */
+  T_OP_NEG = 101,  // negative
+  T_OP_POS = 102,  // positive
+  T_OP_ABS = 103,  // for abs
   T_OP_ADD = 104,
   T_OP_MINUS = 105,
   T_OP_MUL = 106,
   T_OP_DIV = 107,
-  T_OP_REM = 108,   // remainder
+  T_OP_REM = 108,  // remainder
   T_OP_MOD = 109,
   /* common comparison operators */
-  T_OP_EQ = 110,      /* 2. Bool operators */
+  T_OP_EQ = 110, /* 2. Bool operators */
   T_OP_NSEQ = 111,
   T_OP_LE = 112,
   T_OP_LT = 113,
@@ -161,7 +162,7 @@ typedef enum ObItemType
   T_OP_NOT_EXISTS = 142,
   T_OP_QUOTE = 143,
   T_OP_CONV = 144,
-  T_OP_CNN = 145,  /* 3. String operators */
+  T_OP_CNN = 145, /* 3. String operators */
   T_OP_INT_DIV = 146,
   T_OP_SIGN = 147,
   T_OP_ASSIGN = 148,
@@ -170,7 +171,7 @@ typedef enum ObItemType
   T_OP_COLUMN_REF = 151, /* normalize column to function */
   T_OP_CONST_VAL = 152,  /* normalize const to funciton */
 
-  //set expr operators
+  // set expr operators
   T_OP_SET = 153,
   T_OP_UNION = 154,
   T_OP_INTERSECT = 155,
@@ -202,15 +203,17 @@ typedef enum ObItemType
   T_OP_XOR = 172,
   T_OP_RANGE_PARAM = 174,
   T_OP_GET_SUBPROGRAM_VAR = 175,
-  /* item type ids 176 and 177 are reserved after removing Oracle MULTISET expressions. */
+  /* item type ids 176 and 177 are reserved after removing Oracle MULTISET
+     expressions. */
   T_RESERVED_176 = 176,
   T_RESERVED_177 = 177,
   T_OP_BOOL = 178,
   T_OP_STACK_OVERFLOW_CHECK = 179,  // stack over flow check expr.
   T_OP_RUNTIME_FILTER = 180,
   T_OP_TO_OUTFILE_ROW = 181,
-  // The aggregation version arithmetic operator is used to ignore the double overflow error,
-  // because mysql do not check overflow for double in aggregation.
+  // The aggregation version arithmetic operator is used to ignore the double
+  // overflow error, because mysql do not check overflow for double in
+  // aggregation.
   T_OP_AGG_ADD = 182,
   T_OP_AGG_MINUS = 183,
   T_OP_AGG_MUL = 184,
@@ -222,7 +225,8 @@ typedef enum ObItemType
   ///< @note add new operator before this line
 
   // system functions
-  // @note !!! the values of the following tags between T_FUN_SYS and T_MAX_OP SHOULD NOT be changed, new function should be appended only
+  // @note !!! the values of the following tags between T_FUN_SYS and T_MAX_OP
+  // SHOULD NOT be changed, new function should be appended only
   T_FUN_SYS = 500,
   T_FUN_SYS_CAST = 501,
   T_FUN_SYS_CHAR = 502,
@@ -273,7 +277,7 @@ typedef enum ObItemType
   T_FUN_SYS_REPEAT = 547,
   T_FUN_SYS_REPLACE = 548,
   T_FUN_SYS_PART_HASH = 550,
-  //following T_FUN_SYS_PART_KEY_V1 has been removed, it's useless now.
+  // following T_FUN_SYS_PART_KEY_V1 has been removed, it's useless now.
   T_FUN_SYS_PART_KEY_V1 = 551,
   T_FUN_SYS_ADDR_TO_PART_ID = 552,
   T_FUN_SYS_DATABASE = 553,
@@ -393,9 +397,9 @@ typedef enum ObItemType
   T_FUN_SYS_MID = 692,
   T_FUN_SYS_CALC_UROWID = 693,
   T_FUN_SYS_REMOVE_CONST = 695,
-  //following T_FUN_SYS_PART_KEY_V3 has been removed, it's useless now.
+  // following T_FUN_SYS_PART_KEY_V3 has been removed, it's useless now.
   T_FUN_SYS_PART_KEY_V3 = 696,
-  //following T_FUN_SYS_PART_HASH_V2 has been removed, it's useless now.
+  // following T_FUN_SYS_PART_HASH_V2 has been removed, it's useless now.
   T_FUN_SYS_PART_HASH_V2 = 697,
   T_FUN_SYS_SQL_MODE_CONVERT = 698,
   T_FUN_SYS_PREFIX_PATTERN = 699,
@@ -421,7 +425,7 @@ typedef enum ObItemType
   T_FUN_SYS_DEGREES = 715,
   T_FUN_SYS_VALIDATE_PASSWORD_STRENGTH = 716,
   T_FUN_SYS_DAY = 717,
-  T_FUN_SYS_SOUNDEX= 718,
+  T_FUN_SYS_SOUNDEX = 718,
   T_FUN_SYS_UUID_SHORT = 719,
   T_FUN_SYS_BENCHMARK = 720,
   T_FUN_SYS_EXPORT_SET = 721,
@@ -435,8 +439,8 @@ typedef enum ObItemType
   T_FUN_SYS_WEIGHT_STRING = 729,
   T_FUN_SYS_CONVERT_TZ = 730,
   T_FUN_SYS_CRC32 = 731,
-  // @note !!! the values of the following tags between T_FUN_SYS_BIT_AND and T_FUN_SYS_BIT_XOR
-  // SHOULD NOT be changed
+  // @note !!! the values of the following tags between T_FUN_SYS_BIT_AND and
+  // T_FUN_SYS_BIT_XOR SHOULD NOT be changed
   T_FUN_SYS_BIT_AND = 732,
   T_FUN_SYS_BIT_OR = 733,
   T_FUN_SYS_BIT_XOR = 734,
@@ -486,7 +490,7 @@ typedef enum ObItemType
   T_FUN_SYS_SM4_DECRYPT = 778,
   T_FUNC_SYS_MYSQL_PROC_INFO = 781,
   T_FUN_SYS_GET_MYSQL_ROUTINE_PARAMETER_TYPE_STR = 782,
-  T_RESERVED_783 = 783, // Oracle-style TO_CHAR compatibility function removed.
+  T_RESERVED_783 = 783,  // Oracle-style TO_CHAR compatibility function removed.
   T_FUN_INNER_TYPE_TO_ENUMSET = 784,
 
   ///< @note add new mysql only function type before this line
@@ -495,7 +499,8 @@ typedef enum ObItemType
   // legacy PL/system function range
   T_FUN_SYS_CONNECT_BY_PATH = 1401,
   T_FUN_SYS_SYSTIMESTAMP = 1402,
-  /* item type ids 1403-1405 are reserved after removing Oracle TO_DATE/TO_CHAR/TO_NUMBER shells. */
+  /* item type ids 1403-1405 are reserved after removing Oracle
+     TO_DATE/TO_CHAR/TO_NUMBER shells. */
   T_RESERVED_1403 = 1403,
   T_RESERVED_1404 = 1404,
   T_RESERVED_1405 = 1405,
@@ -504,7 +509,8 @@ typedef enum ObItemType
   T_FUN_SYS_HEXTORAW = 1409,
   T_FUN_SYS_RAWTOHEX = 1410,
   // 1411-1412: Oracle UTL_RAW function ids removed.
-  /* item type ids 1413-1414 are reserved after removing Oracle TO_TIMESTAMP functions. */
+  /* item type ids 1413-1414 are reserved after removing Oracle TO_TIMESTAMP
+     functions. */
   T_RESERVED_1413 = 1413,
   T_RESERVED_1414 = 1414,
   // 1415-1424: Oracle UTL_RAW function ids removed.
@@ -569,13 +575,15 @@ typedef enum ObItemType
   T_FUN_SYS_TO_NCHAR = 1536,
   T_FUN_SYS_SET = 1537,
   T_FUN_SYS_CARDINALITY = 1538,
-  /* item type ids 1539-1541 are reserved after removing Oracle correlation/covariance aggregates. */
+  /* item type ids 1539-1541 are reserved after removing Oracle
+     correlation/covariance aggregates. */
   T_RESERVED_1539 = 1539,
   T_RESERVED_1540 = 1540,
   T_RESERVED_1541 = 1541,
   T_FUN_VAR_POP = 1542,
   T_FUN_VAR_SAMP = 1543,
-  /* item type ids 1544-1552 are reserved after removing Oracle linear regression aggregates. */
+  /* item type ids 1544-1552 are reserved after removing Oracle linear
+     regression aggregates. */
   T_RESERVED_1544 = 1544,
   T_RESERVED_1545 = 1545,
   T_RESERVED_1546 = 1546,
@@ -586,7 +594,8 @@ typedef enum ObItemType
   T_RESERVED_1551 = 1551,
   T_RESERVED_1552 = 1552,
   // 1553-1554: Oracle UTL_INADDR function ids removed.
-  /* item type ids 1555-1565 are reserved after removing Oracle hypothetical rank and KEEP aggregates. */
+  /* item type ids 1555-1565 are reserved after removing Oracle hypothetical
+     rank and KEEP aggregates. */
   T_RESERVED_1555 = 1555,
   T_RESERVED_1556 = 1556,
   T_RESERVED_1557 = 1557,
@@ -665,9 +674,10 @@ typedef enum ObItemType
   T_FUN_SYS_JSON_VALUE = 1629,
   T_FUN_JSON_ARRAYAGG = 1630,
   T_FUN_JSON_OBJECTAGG = 1631,
-// please modify need_calc_json_as_text if other json functions are added
+  // please modify need_calc_json_as_text if other json functions are added
   T_FUN_SYS_INNER_AGGR_CODE = 1632,
-  // T_FUN_SYS_TIMESTAMP_TO_SCN and T_FUN_SYS_SCN_TO_TIMESTAMP are shared timestamp helpers.
+  // T_FUN_SYS_TIMESTAMP_TO_SCN and T_FUN_SYS_SCN_TO_TIMESTAMP are shared
+  // timestamp helpers.
   T_FUN_SYS_TIMESTAMP_TO_SCN = 1633,
   T_FUN_SYS_SCN_TO_TIMESTAMP = 1634,
 
@@ -718,7 +728,8 @@ typedef enum ObItemType
   T_FUN_SYS_ST_Y = 1679,
   T_FUN_SYS_ST_LATITUDE = 1680,
   // gis expr should add above
-  // please maintain is_geo_expr / is_mysql_geo_expr / is_priv_geo_expr if other gis expr added
+  // please maintain is_geo_expr / is_mysql_geo_expr / is_priv_geo_expr if other
+  // gis expr added
 
   T_FUN_SYS_IS_JSON = 1681,
   T_FUN_SYS_JSON_EQUAL = 1682,
@@ -727,14 +738,15 @@ typedef enum ObItemType
   T_FUN_ORA_JSON_OBJECTAGG = 1685,
   T_FUN_SYS_JSON_EXISTS = 1686,
   T_FUN_SYS_TREAT = 1687,
-  T_NULLX_CLAUSE = 1688,   // null clause on json expr
+  T_NULLX_CLAUSE = 1688,  // null clause on json expr
   T_FUN_SYS_NLS_INITCAP = 1689,
-  T_WEIGHT_STRING_LEVEL_PARAM = 1690, // `level 1-2` and `level 1,2,3` clause on json expr
+  T_WEIGHT_STRING_LEVEL_PARAM =
+      1690,  // `level 1-2` and `level 1,2,3` clause on json expr
   T_FUN_SYS_CURRENT_SCN = 1691,
   T_FUN_SYS_XML_EXTRACTVALUE = 1697,
   T_FUN_SYS_UPDATE_XML = 1702,
-  T_FUN_SYS_JSON_OBJECT_WILD_STAR = 1704, // wild star in json object
-  T_FUN_SYS_JSON_SCHEMA_VALID = 1705,         // mysql json schema func
+  T_FUN_SYS_JSON_OBJECT_WILD_STAR = 1704,  // wild star in json object
+  T_FUN_SYS_JSON_SCHEMA_VALID = 1705,      // mysql json schema func
   T_FUN_SYS_JSON_SCHEMA_VALIDATION_REPORT = 1706,
   T_FUN_SYS_JSON_APPEND = 1707,
   T_RESERVED_TYPE_1711 = 1711,
@@ -800,7 +812,7 @@ typedef enum ObItemType
   T_FUNC_SYS_ARRAY_SORTBY = 1773,
   T_FUNC_SYS_ARRAY_FILTER = 1774,
   T_FUNC_SYS_ARRAY_LENGTH = 1775,
-  T_FUNC_SYS_ARRAY_RANGE = 1776, // FARM COMPAT WHITELIST
+  T_FUNC_SYS_ARRAY_RANGE = 1776,  // FARM COMPAT WHITELIST
   T_FUNC_SYS_ARRAY_POSITION = 1777,
   T_FUNC_SYS_ARRAY_EXCEPT = 1778,
   T_FUNC_SYS_ARRAY_INTERSECT = 1779,
@@ -819,7 +831,7 @@ typedef enum ObItemType
   T_FUN_SYS_VECTOR_COS_SIMILARITY = 1792,
   ///< @note add new legacy PL/system function type before this line
 
-  T_FUN_SYS_TABLET_AUTOINC_NEXTVAL = 1801, // add only for heap table
+  T_FUN_SYS_TABLET_AUTOINC_NEXTVAL = 1801,  // add only for heap table
   T_FUN_SYS_GENERATOR = 1802,
   T_FUN_SYS_ZIPF = 1803,
   T_FUN_SYS_NORMAL = 1804,
@@ -841,13 +853,13 @@ typedef enum ObItemType
   T_FUN_SYS_INNER_DECIMAL_TO_YEAR = 1820,
   T_FUN_SYS_SPLIT_PART = 1821,
   T_FUN_SYS_KEYVALUE = 1822,
-  T_FUN_SYS_VEC_VID = 1900,   // vector index
+  T_FUN_SYS_VEC_VID = 1900,  // vector index
   T_FUN_SYS_VEC_TYPE = 1901,
   T_FUN_SYS_VEC_VECTOR = 1902,
   T_FUN_SYS_VEC_SCN = 1903,
   T_FUN_SYS_VEC_KEY = 1904,
   T_FUN_SYS_VEC_DATA = 1905,
-  T_FUN_SYS_VEC_IVF_CENTER_ID = 1906,   // ivf vector index
+  T_FUN_SYS_VEC_IVF_CENTER_ID = 1906,  // ivf vector index
   T_FUN_SYS_VEC_IVF_CENTER_VECTOR = 1907,
   T_FUN_SYS_VEC_IVF_FLAT_DATA_VECTOR = 1908,
   T_FUN_SYS_VEC_IVF_SQ8_DATA_VECTOR = 1909,
@@ -863,11 +875,11 @@ typedef enum ObItemType
   T_FUN_SYS_TMP_FILE_CLOSE = 1923,
   T_FUN_SYS_TMP_FILE_WRITE = 1924,
   T_FUN_SYS_TMP_FILE_READ = 1925,
-  T_FUN_SYS_HYBRID_VEC_CHUNK = 1926, // hybrid vector index
-  T_FUN_SYS_FORMAT_PROFILE = 1927, // format query profile
+  T_FUN_SYS_HYBRID_VEC_CHUNK = 1926,  // hybrid vector index
+  T_FUN_SYS_FORMAT_PROFILE = 1927,    // format query profile
   T_FUN_SYS_EMBEDDED_VEC = 1928,
   T_FUN_SYS_AI_PROMPT = 1929,
-  T_FUN_SYS_VEC_VISIBLE = 1930, // vector index table 5
+  T_FUN_SYS_VEC_VISIBLE = 1930,  // vector index table 5
 
   ///< @note add new sys function type before this line
   T_FUN_SYS_END = 2000,
@@ -918,7 +930,7 @@ typedef enum ObItemType
   T_FUN_SYS_BUCKET = 2086,
   T_MAX_OP = 3000,
 
-  //pseudo column, to mark the group iterator id
+  // pseudo column, to mark the group iterator id
   T_PSEUDO_GROUP_ID = 3003,
 
   T_INNER_AGGR_CODE = 3004,
@@ -928,11 +940,12 @@ typedef enum ObItemType
   T_PSEUDO_STMT_ID = 3009,
   T_PSEUDO_RANDOM = 3010,
   T_INNER_WF_AGGR_STAUTS = 3011,
-  T_PSEUDO_ROW_TRANS_INFO_COLUMN = 3012, // trans_info, only for defensive check
+  T_PSEUDO_ROW_TRANS_INFO_COLUMN =
+      3012,  // trans_info, only for defensive check
   T_PSEUDO_IDENTIFY_SEQ = 3013,
   T_PSEUDO_ROLLUP_GROUPING_ID = 3014,
   T_PSEUDO_GROUP_PARAM = 3040,
-  T_PSEUDO_RELEVANCE_SCORE = 3042, // relecance score for sparse retireval
+  T_PSEUDO_RELEVANCE_SCORE = 3042,  // relecance score for sparse retireval
   T_PSEUDO_DDL_SLICE_ID = 3044,
   T_WINDOW_FUNCTION = 3151,
   T_WIN_GENERALIZED_WINDOW = 3152,
@@ -957,19 +970,19 @@ typedef enum ObItemType
   T_WIN_FUN_LAG = 3171,
   T_WIN_FUN_AVG = 3172,
   T_WIN_FUN_RATIO_TO_REPORT = 3173,
-  T_TABLET_AUTOINC_NEXTVAL = 3266, // hidden_pk for heap table
+  T_TABLET_AUTOINC_NEXTVAL = 3266,  // hidden_pk for heap table
 
   ///< @note values of the following symbols are insiginificant
   T_DEFAULT = 3267,
   T_CAST_ARGUMENT = 3268,
   T_CHAR_CHARSET = 3269,
-  T_HINT = 3270,     // Hint message from rowkey
+  T_HINT = 3270,  // Hint message from rowkey
   T_IDENT = 3271,
   T_SIMPLE_IDENT = 3272,
   T_STAR = 3273,
   T_SYSTEM_VARIABLE = 3274,
   T_USER_VARIABLE_IDENTIFIER = 3275,
-  T_LEFT_VALUE = 3276,//assignment
+  T_LEFT_VALUE = 3276,  // assignment
 
   /* Data type tags */
   T_TYPE_INTEGER = 3277,
@@ -1130,8 +1143,10 @@ typedef enum ObItemType
   T_TABLE_COLLECTION_EXPRESSION = 3460,
   T_DIAGNOSTICS = 3461,
   T_JSON_TABLE_EXPRESSION = 3462,
+  T_READ_FILE_EXPRESSION =
+      3470,  // 这里给个没被占用的数字即可，或者直接写 T_READ_FILE_EXPRESSION,
   T_JSON_TABLE_COLUMN = 3463,
-  //pseudo_column
+  // pseudo_column
   T_PSEUDO_COLUMN = 3464,
   T_LEVEL = 3465,
   T_CONNECT_BY_ISCYCLE = 3466,
@@ -1171,7 +1186,7 @@ typedef enum ObItemType
   T_ORDER_BY = 3500,
   T_SET_TABLE_COMMENT = 3501,
   T_SET_COLUMN_COMMENT = 3502,
-  T_MULTI_LOCK_ROWNUM = 3503, // add only for multi_part_for_update
+  T_MULTI_LOCK_ROWNUM = 3503,  // add only for multi_part_for_update
 
   T_TEMPORARY = 3508,
 
@@ -1249,7 +1264,7 @@ typedef enum ObItemType
   T_PARSER_NAME = 3601,
   T_DROP_INDEX = 3602,
 
-  //recycle related
+  // recycle related
   T_RECYCLEBIN_RESTORE_DATABASE = 3604,
   T_RECYCLEBIN_RESTORE_TABLE = 3605,
   T_PURGE_RECYCLEBIN = 3607,
@@ -1438,7 +1453,7 @@ typedef enum ObItemType
   T_SQL_NOT_FOUND = 3859,
   T_SP_EXCEPTION_OTHERS = 3860,
 
-  //pl parse item type
+  // pl parse item type
   T_SP_PARAM = 3861,
   T_SP_PARAM_LIST = 3862,
   T_SP_NAME = 3863,
@@ -1544,7 +1559,8 @@ typedef enum ObItemType
   T_SP_CURSOR_NOTFOUND = 3969,
   T_SP_CURSOR_ROWCOUNT = 3970,
   T_RESERVED_3971 = 3971,
-  /* item type ids 3972-3974 are reserved after removing Oracle FORALL cursor attributes. */
+  /* item type ids 3972-3974 are reserved after removing Oracle FORALL cursor
+     attributes. */
   T_RESERVED_3972 = 3972,
   T_RESERVED_3973 = 3973,
   T_RESERVED_3974 = 3974,
@@ -1583,7 +1599,7 @@ typedef enum ObItemType
   T_RESERVED_4005 = 4005,
   T_RESERVED_4006 = 4006,
 
-  //pl package parse item type
+  // pl package parse item type
   T_PACKAGE_CREATE = 4007,
   T_PACKAGE_CREATE_BODY = 4008,
   T_PACKAGE_BLOCK = 4009,
@@ -1612,7 +1628,7 @@ typedef enum ObItemType
   T_ALTER_PARTITION_PARTITIONED = 4045,
   T_RANDOM = 4047,
 
-  //load data
+  // load data
   T_LOAD_DATA = 4053,
   T_LOCAL = 4054,
   T_ESCAPED_STR = 4055,
@@ -1662,7 +1678,7 @@ typedef enum ObItemType
   T_STORE_FORMAT = 4114,
 
   T_OPTIMIZE_TABLE = 4117,
-  //cluster mgr
+  // cluster mgr
   T_TABLE_SNAPSHOT_QUERY_SCN = 4128,
   T_TABLE_SNAPSHOT_QUERY = 4129,
   T_FAILOVER_TO_PRIMARY = 4130,
@@ -1784,8 +1800,8 @@ typedef enum ObItemType
   T_JOIN_FIRST_UNNEST = 4251,
   T_NO_JOIN_FIRST_UNNEST = 4252,
   T_INTERVAL_LITERAL = 4253,
-  //T_INTERVAL_YM_LITERAL,
-  //T_INTERVAL_DS_LITERAL,
+  // T_INTERVAL_YM_LITERAL,
+  // T_INTERVAL_DS_LITERAL,
 
   // trigger parse item type
   T_TG_ALTER = 4254,
@@ -1807,9 +1823,9 @@ typedef enum ObItemType
   T_RESERVED_4270 = 4270,
   T_RESERVED_4271 = 4271,
   T_RESERVED_4272 = 4272,
-//  T_TG_SIMPLE_BODY,
-//  T_TG_SIMPLE_DECLARE,
-//  T_TG_EXECUTE_BLOCK,
+  //  T_TG_SIMPLE_BODY,
+  //  T_TG_SIMPLE_DECLARE,
+  //  T_TG_EXECUTE_BLOCK,
   T_RESERVED_4273 = 4273,
   T_RESERVED_4274 = 4274,
   T_RESERVED_4275 = 4275,
@@ -1822,11 +1838,11 @@ typedef enum ObItemType
   T_NO_USE_NL_MATERIALIZATION = 4282,
   T_RELATION_FACTORS = 4285,
 
-  //ssl
+  // ssl
   T_TLS_OPTIONS = 4286,
   T_TLS_NONE = 4287,
   T_TLS_SSL = 4288,
-  T_TLS_XFZN = 4289,//x509
+  T_TLS_XFZN = 4289,  // x509
   T_TLS_SPECIFIED = 4290,
   T_TLS_CIPHER = 4291,
   T_TLS_ISSUER = 4292,
@@ -1924,7 +1940,7 @@ typedef enum ObItemType
   T_RESERVED_4406 = 4406,
   T_ALTER_INDEX_OPTION_EXTENDED = 4408,
 
-  T_PIVOT = 4409,//check
+  T_PIVOT = 4409,  // check
   T_UNPIVOT = 4410,
   T_PIVOT_AGGR_LIST = 4411,
   T_PIVOT_AGGR = 4412,
@@ -1940,8 +1956,8 @@ typedef enum ObItemType
   T_RESERVED_4423 = 4423,
   T_RESERVED_4424 = 4424,
   T_RESERVED_4425 = 4425,
-  T_FETCH_CLAUSE = 4426, //use to support fetch next rows only
-  T_FETCH_TIES_CLAUSE = 4427, //use to support fetch next rows with tie
+  T_FETCH_CLAUSE = 4426,       // use to support fetch next rows only
+  T_FETCH_TIES_CLAUSE = 4427,  // use to support fetch next rows with tie
   T_LABEL_LIST = 4433,
   T_ALTER_USER = 4435,
   T_ALTER_USER_DEFAULT_ROLE = 4436,
@@ -1967,13 +1983,13 @@ typedef enum ObItemType
 
   T_FLUSH_DAG_WARNINGS = 4470,
 
-  T_MULTI_INSERT = 4471,//used to support multi table insert
-  T_INSERT_TABLE_LIST = 4472,//used to support multi table insert
-  T_MULTI_TABLE_INSERT = 4473,//used to support multi table insert
-  T_MULTI_CONDITION_INSERT = 4474,//used to support multi table insert
-  T_CONDITIION_INSERT_LIST = 4475,//used to support multi table insert
-  T_CONDITION_INSERT = 4476,//used to support multi table insert
-  T_SINGLE_INSERT = 4477,//used to support multi table insert
+  T_MULTI_INSERT = 4471,            // used to support multi table insert
+  T_INSERT_TABLE_LIST = 4472,       // used to support multi table insert
+  T_MULTI_TABLE_INSERT = 4473,      // used to support multi table insert
+  T_MULTI_CONDITION_INSERT = 4474,  // used to support multi table insert
+  T_CONDITIION_INSERT_LIST = 4475,  // used to support multi table insert
+  T_CONDITION_INSERT = 4476,        // used to support multi table insert
+  T_SINGLE_INSERT = 4477,           // used to support multi table insert
 
   T_GENERATED_COLUMN = 4478,
   T_CONSTR_ALWAYS = 4479,
@@ -2046,15 +2062,15 @@ typedef enum ObItemType
   T_CONSTR_LOB_CHUNK_SIZE = 4558,
   T_LOB_CHUNK_SIZE = 4559,
 
-  T_ALTER_SYSTEM_KILL = 4560, // used to support kill session
+  T_ALTER_SYSTEM_KILL = 4560,  // used to support kill session
 
-  T_ACTIVATE_STANDBY = 4561, // ALTER SYSTEM ACTIVATE STANDBY (failover)
-  T_SWITCHOVER_TO_STANDBY = 4571, // ALTER SYSTEM SWITCHOVER TO STANDBY
-  T_SWITCHOVER_TO_PRIMARY = 4572, // ALTER SYSTEM SWITCHOVER TO PRIMARY
+  T_ACTIVATE_STANDBY = 4561,       // ALTER SYSTEM ACTIVATE STANDBY (failover)
+  T_SWITCHOVER_TO_STANDBY = 4571,  // ALTER SYSTEM SWITCHOVER TO STANDBY
+  T_SWITCHOVER_TO_PRIMARY = 4572,  // ALTER SYSTEM SWITCHOVER TO PRIMARY
 
   T_LOB_STORAGE_CLAUSE = 4562,
-  T_VALUES_TABLE_EXPRESSION = 4568,//used to values statement
-  T_VALUES_ROW_LIST = 4569,//used to values statement
+  T_VALUES_TABLE_EXPRESSION = 4568,  // used to values statement
+  T_VALUES_ROW_LIST = 4569,          // used to values statement
   T_LOB_INROW_THRESHOLD = 4570,
   T_XML_TABLE_EXPRESSION = 4573,
   T_CREATE_FMT_OUTLINE = 4574,
@@ -2128,14 +2144,14 @@ typedef enum ObItemType
   T_QUOTA = 4724,
   T_TABLE = 4725,
 
-  //Rebuild Tablet
+  // Rebuild Tablet
 
   T_MICRO_INDEX_CLUSTERED = 4728,
 
   // Erase micro cache
 
-  //restore sts
-  // optimizer hint
+  // restore sts
+  //  optimizer hint
   T_PQ_GBY_HINT = 4734,
   T_PQ_DISTINCT_HINT = 4735,
   T_DISTRIBUTE_BASIC = 4736,
@@ -2160,7 +2176,8 @@ typedef enum ObItemType
 
   T_LOAD_TIME_ZONE_INFO = 4764,
 
-  // item type ids 4765-4771 are reserved after removing Oracle wrapped PL units.
+  // item type ids 4765-4771 are reserved after removing Oracle wrapped PL
+  // units.
   T_RESERVED_4765 = 4765,
   T_RESERVED_4766 = 4766,
   T_RESERVED_4767 = 4767,
@@ -2196,7 +2213,7 @@ typedef enum ObItemType
   T_IK_MODE = 4800,
   T_DML_PARALLEL = 4801,
 
-  //pl dbms scheduler calendar
+  // pl dbms scheduler calendar
   T_SCHED_CALENDAR = 4802,
   T_SCHED_CALENDAR_LIST = 4803,
   T_SCHED_CALENDAR_FREQ = 4804,
@@ -2219,33 +2236,31 @@ typedef enum ObItemType
   T_LOG_ERROR_LIMIT = 4842,
   T_LOG_ERROR_UNLIMITED = 4843,
 
-
   // logservice access point
   T_BOOTSTRAP_INFO = 4846,
   T_LOGSERVICE_ACCESS_POINT = 4847,
 
   T_SP_SYS_DISPATCH_CALL = 4849,
 
-  T_LOG_ERROR=4860,
-  T_READ_ERROR_LOG=4861,
+  T_LOG_ERROR = 4860,
+  T_READ_ERROR_LOG = 4861,
 
-  T_GENERAL_PROPERTY  = 4863,
-
+  T_GENERAL_PROPERTY = 4863,
 
   T_UDF_PROPERTY = 4865,
   T_UDF_PROPERTY_LIST = 4866,
 
   T_MICRO_BLOCK_FORMAT_VERSION = 4867,
   T_ALTER_SUBPARTITION_EXCHANGE = 4869,
-  T_CREATE_SENSITIVE_RULE       = 4870,
-  T_DROP_SENSITIVE_RULE         = 4871,
-  T_ALTER_SENSITIVE_RULE        = 4872,
+  T_CREATE_SENSITIVE_RULE = 4870,
+  T_DROP_SENSITIVE_RULE = 4871,
+  T_ALTER_SENSITIVE_RULE = 4872,
   T_ALTER_SENSITIVE_RULE_ACTION = 4873,
-  T_SENSITIVE_FIELD             = 4874,
-  T_SENSITIVE_FIELD_LIST        = 4875,
-  T_SENSITIVE_PROTECTION_SPEC   = 4876,
-  T_SENSITIVE_MASKING_SPEC      = 4878,
-  T_SHOW_SENSITIVE_RULES        = 4879,
+  T_SENSITIVE_FIELD = 4874,
+  T_SENSITIVE_FIELD_LIST = 4875,
+  T_SENSITIVE_PROTECTION_SPEC = 4876,
+  T_SENSITIVE_MASKING_SPEC = 4878,
+  T_SHOW_SENSITIVE_RULES = 4879,
   T_SHOW_SENSITIVE_RULES_OPTION = 4880,
 
   T_FREQ_THRESHOLD = 4887,
@@ -2257,7 +2272,7 @@ typedef enum ObItemType
   T_INDEX_MERGE_HINT = 4891,
   T_NO_INDEX_MERGE_HINT = 4892,
 
-    // alter type
+  // alter type
   T_TYPE_ALTER = 4901,
   T_TYPE_ALTER_CLAUSE = 4902,
   T_TYPE_ALTER_ATTR = 4904,
@@ -2267,169 +2282,164 @@ typedef enum ObItemType
   T_FORMAT_OBJECT_NAME_DISPLAY = 4909,
   T_CACHE_REFRESH_INTERVAL_SEC = 4910,
   T_TRANSITION = 4912,
-  T_FUN_ES_SCORE = 4913, // fulltext index for ES SQL
-  T_FUN_ES_MATCH = 4914, // fulltext index for ES SQL
+  T_FUN_ES_SCORE = 4913,  // fulltext index for ES SQL
+  T_FUN_ES_MATCH = 4914,  // fulltext index for ES SQL
   T_HYBRID_SEARCH_EXPRESSION = 4915,
   T_FORK_TABLE = 4916,
   T_FORK_DATABASE = 4917,
   T_DIFF_TABLE = 4918,
   T_MERGE_TABLE = 4919,
-  T_MAX //Attention: add a new type before T_MAX
+  T_FLUSH_PRIVILEGES = 4920,
+  T_MAX  // Attention: add a new type before T_MAX
 } ObItemType;
 
-typedef enum ObCacheType
-{
-  CACHE_TYPE_INVALID = -1, //Attention: add a new type after CACHE_TYPE_INVALID
+typedef enum ObCacheType {
+  CACHE_TYPE_INVALID =
+      -1,  // Attention: add a new type after CACHE_TYPE_INVALID
   CACHE_TYPE_PLAN,
   CACHE_TYPE_PL_OBJ,
   CACHE_TYPE_PS_OBJ,
   CACHE_TYPE_LIB_CACHE,
-  CACHE_TYPE_MAX //Attention: add a new type before CACHE_TYPE_MAX
+  CACHE_TYPE_MAX  // Attention: add a new type before CACHE_TYPE_MAX
 } ObCacheType;
 
-typedef enum ObOutlineType
-{
-  OUTLINE_TYPE_INVALID = -1, //Attention: add a new type after CACHE_TYPE_INVALID
+typedef enum ObOutlineType {
+  OUTLINE_TYPE_INVALID =
+      -1,  // Attention: add a new type after CACHE_TYPE_INVALID
   OUTLINE_TYPE_NORMAL,
   OUTLINE_TYPE_FORMAT,
-  OUTLINE_TYPE_MAX //Attention: add a new type before CACHE_TYPE_MAX
+  OUTLINE_TYPE_MAX  // Attention: add a new type before CACHE_TYPE_MAX
 } ObOutlineType;
 
-#define IS_BOOL_OP(op) \
-  (((op) >= T_OP_EQ && (op) <= T_OP_NOT_IN && (op) != T_OP_POW) \
-    || ((op) == T_OP_EXISTS) \
-    || ((op) == T_OP_NOT_EXISTS) \
-    || ((op) == T_FUN_SYS_STRCMP) \
-    || ((op) == T_FUN_SYS_JSON_VALID) \
-    || ((op) == T_FUN_SYS_JSON_CONTAINS) \
-    || ((op) == T_FUN_SYS_JSON_MEMBER_OF) \
-    || ((op) == T_FUN_SYS_JSON_OVERLAPS) \
-    || ((op) == T_FUN_SYS_JSON_CONTAINS) \
-    || ((op) == T_FUN_SYS_JSON_CONTAINS_PATH) \
-    || ((op) == T_FUN_SYS_JSON_SCHEMA_VALID) \
-    || ((op) == T_FUN_SYS_JSON_EQUAL) \
-    || ((op) == T_FUN_SYS_IS_JSON) \
-    || ((op) == T_FUN_SYS_JSON_EXISTS) \
-    || ((op) == T_BOOL) \
-    || ((op) == T_OP_XOR) \
-    || ((op) == T_FUN_SYS_IS_UUID) \
-    || ((op) == T_FUN_SYS_ST_CONTAINS) \
-    || ((op) == T_FUN_SYS_ST_WITHIN) \
-    || ((op) == T_FUN_SYS_ST_DWITHIN) \
-    || ((op) == T_FUN_SYS_ST_INTERSECTS) \
-    || ((op) == T_FUN_SYS_ST_COVERS) \
-    || ((op) == T_FUN_SYS_PRIV_ST_EQUALS) \
-    || ((op) == T_FUN_SYS_PRIV_ST_TOUCHES) \
-    || ((op) == T_FUN_SYS_ST_CROSSES) \
-    || ((op) == T_FUN_SYS_ST_OVERLAPS)) \
+#define IS_BOOL_OP(op)                                                        \
+  (((op) >= T_OP_EQ && (op) <= T_OP_NOT_IN && (op) != T_OP_POW) ||            \
+   ((op) == T_OP_EXISTS) || ((op) == T_OP_NOT_EXISTS) ||                      \
+   ((op) == T_FUN_SYS_STRCMP) || ((op) == T_FUN_SYS_JSON_VALID) ||            \
+   ((op) == T_FUN_SYS_JSON_CONTAINS) || ((op) == T_FUN_SYS_JSON_MEMBER_OF) || \
+   ((op) == T_FUN_SYS_JSON_OVERLAPS) || ((op) == T_FUN_SYS_JSON_CONTAINS) ||  \
+   ((op) == T_FUN_SYS_JSON_CONTAINS_PATH) ||                                  \
+   ((op) == T_FUN_SYS_JSON_SCHEMA_VALID) || ((op) == T_FUN_SYS_JSON_EQUAL) || \
+   ((op) == T_FUN_SYS_IS_JSON) || ((op) == T_FUN_SYS_JSON_EXISTS) ||          \
+   ((op) == T_BOOL) || ((op) == T_OP_XOR) || ((op) == T_FUN_SYS_IS_UUID) ||   \
+   ((op) == T_FUN_SYS_ST_CONTAINS) || ((op) == T_FUN_SYS_ST_WITHIN) ||        \
+   ((op) == T_FUN_SYS_ST_DWITHIN) || ((op) == T_FUN_SYS_ST_INTERSECTS) ||     \
+   ((op) == T_FUN_SYS_ST_COVERS) || ((op) == T_FUN_SYS_PRIV_ST_EQUALS) ||     \
+   ((op) == T_FUN_SYS_PRIV_ST_TOUCHES) || ((op) == T_FUN_SYS_ST_CROSSES) ||   \
+   ((op) == T_FUN_SYS_ST_OVERLAPS))
 
 // Only selected list expressions can accept bool(tinyint) param.
-#define ALLOW_BOOL_INPUT(op) \
-  ((IS_BOOL_OP((op))) \
-    || ((op) == T_FUN_COLUMN_CONV) \
-    || ((op) == T_FUN_PL_COLLECTION_CONSTRUCT) \
-    || ((op) == T_FUN_PL_INTEGER_CHECKER) \
-    || ((op) == T_FUN_SYS_CAST) \
-    || ((op) == T_FUN_SYS_LNNVL) \
-    || ((op) == T_FUN_SYS_NVL) \
-    || ((op) == T_FUN_UDF) \
-    || ((op) == T_OP_ARG_CASE) \
-    || ((op) == T_OP_CASE) \
-    || ((op) == T_OP_OUTPUT_PACK) \
-    || ((op) == T_FUN_SYS_JSON_OBJECT) \
-    || ((op) == T_FUN_SYS_JSON_ARRAY) \
-    || ((op) == T_OP_TO_OUTFILE_ROW) \
-    || ((op) == T_FUNC_SYS_INNER_IS_TRUE)) \
-
-
+#define ALLOW_BOOL_INPUT(op)                                                \
+  ((IS_BOOL_OP((op))) || ((op) == T_FUN_COLUMN_CONV) ||                     \
+   ((op) == T_FUN_PL_COLLECTION_CONSTRUCT) ||                               \
+   ((op) == T_FUN_PL_INTEGER_CHECKER) || ((op) == T_FUN_SYS_CAST) ||        \
+   ((op) == T_FUN_SYS_LNNVL) || ((op) == T_FUN_SYS_NVL) ||                  \
+   ((op) == T_FUN_UDF) || ((op) == T_OP_ARG_CASE) || ((op) == T_OP_CASE) || \
+   ((op) == T_OP_OUTPUT_PACK) || ((op) == T_FUN_SYS_JSON_OBJECT) ||         \
+   ((op) == T_FUN_SYS_JSON_ARRAY) || ((op) == T_OP_TO_OUTFILE_ROW) ||       \
+   ((op) == T_FUNC_SYS_INNER_IS_TRUE))
 
 #define IS_RANGE_CMP_OP(op) ((op) >= T_OP_LE && (op) <= T_OP_GT)
 // we will extract query range from following OP expressions
 // between and, in, is null will be converted to them
-#define IS_BASIC_CMP_OP(op) (((op) >= T_OP_EQ && (op) <= T_OP_GT) || ((op) == T_OP_LIKE))
-#define IS_STRICT_OP(op) ((IS_BASIC_CMP_OP(op) && (op) != T_OP_NSEQ) || ((op) == T_OP_NE))
+#define IS_BASIC_CMP_OP(op) \
+  (((op) >= T_OP_EQ && (op) <= T_OP_GT) || ((op) == T_OP_LIKE))
+#define IS_STRICT_OP(op) \
+  ((IS_BASIC_CMP_OP(op) && (op) != T_OP_NSEQ) || ((op) == T_OP_NE))
 #define IS_EXPR_OP(op) ((op) > T_MIN_OP && (op) < T_MAX_OP)
-#define IS_CONST_LITERAL(op) (((op) > T_INVALID && (op) < T_MAX_CONST && (op) != T_QUESTIONMARK) || T_USER_VARIABLE_IDENTIFIER == op)
-#define IS_DATATYPE_OP(op) (T_INVALID < (op) && (op) < T_MAX_CONST && T_EXTEND != (op) && T_QUESTIONMARK != (op))
-#define IS_DATATYPE_OR_QUESTIONMARK_OP(op) (T_INVALID < (op) && (op) < T_MAX_CONST && T_EXTEND != (op))
+#define IS_CONST_LITERAL(op)                                             \
+  (((op) > T_INVALID && (op) < T_MAX_CONST && (op) != T_QUESTIONMARK) || \
+   T_USER_VARIABLE_IDENTIFIER == op)
+#define IS_DATATYPE_OP(op)                                       \
+  (T_INVALID < (op) && (op) < T_MAX_CONST && T_EXTEND != (op) && \
+   T_QUESTIONMARK != (op))
+#define IS_DATATYPE_OR_QUESTIONMARK_OP(op) \
+  (T_INVALID < (op) && (op) < T_MAX_CONST && T_EXTEND != (op))
 #define IS_NUMBER_TC_OP(op) (T_NUMBER == (op) || T_UNUMBER == (op))
-#define IS_STRING_TC_OP(op) (T_VARCHAR == (op) || T_CHAR == (op) || T_VARBINARY == (op) || T_BINARY == (op))
-#define IS_SINGLE_VALUE_OP(op) (T_OP_EQ == (op) || T_OP_NSEQ == (op) || T_OP_IN == (op))
+#define IS_STRING_TC_OP(op)                                      \
+  (T_VARCHAR == (op) || T_CHAR == (op) || T_VARBINARY == (op) || \
+   T_BINARY == (op))
+#define IS_SINGLE_VALUE_OP(op) \
+  (T_OP_EQ == (op) || T_OP_NSEQ == (op) || T_OP_IN == (op))
 #define IS_CONST_TYPE(op) ((op) > T_INVALID && (op) < T_MAX_CONST)
-#define IS_FUN_SYS_TYPE(op) (((op) >= T_FUN_SYS && (op) < T_FUN_SYS_END) \
-                            || ((op) > T_MIN_OP && (op) <= T_OP_CONST_VAL) \
-                            || T_OP_CONNECT_BY_ROOT == (op))
+#define IS_FUN_SYS_TYPE(op)                       \
+  (((op) >= T_FUN_SYS && (op) < T_FUN_SYS_END) || \
+   ((op) > T_MIN_OP && (op) <= T_OP_CONST_VAL) || \
+   T_OP_CONNECT_BY_ROOT == (op))
 
-#define IS_FUN_STYLE(op) (((op) >= T_FUN_SYS && (op) < T_FUN_SYS_END) \
-    || ((op) >= T_FUN_MAX && (op) <= T_FUN_APPROX_COUNT_DISTINCT_SYNOPSIS_MERGE) \
-    || T_OP_ABS == (op) \
-    || T_OP_MOD == (op) \
-    || T_OP_POW == (op) \
-    || T_OP_CONV == (op) \
-    || T_OP_CNN == (op) \
-    || T_OP_SIGN == (op) \
-    || T_OP_CONNECT_BY_ROOT == (op))
+#define IS_FUN_STYLE(op)                                         \
+  (((op) >= T_FUN_SYS && (op) < T_FUN_SYS_END) ||                \
+   ((op) >= T_FUN_MAX &&                                         \
+    (op) <= T_FUN_APPROX_COUNT_DISTINCT_SYNOPSIS_MERGE) ||       \
+   T_OP_ABS == (op) || T_OP_MOD == (op) || T_OP_POW == (op) ||   \
+   T_OP_CONV == (op) || T_OP_CNN == (op) || T_OP_SIGN == (op) || \
+   T_OP_CONNECT_BY_ROOT == (op))
 
 #define ITEM_TO_OBJ_TYPE(op) (static_cast<ObObjType>(op))
 
-#define IS_COMPARISON_OP(op)                            \
-  (((op) >= T_OP_EQ && (op) <= T_OP_NE)                 \
-   || ((op) >= T_OP_SQ_EQ && (op) <= T_OP_SQ_NE)        \
-   || ((op) == T_OP_IN) || ((op) == T_OP_NOT_IN))
+#define IS_COMPARISON_OP(op)                                          \
+  (((op) >= T_OP_EQ && (op) <= T_OP_NE) ||                            \
+   ((op) >= T_OP_SQ_EQ && (op) <= T_OP_SQ_NE) || ((op) == T_OP_IN) || \
+   ((op) == T_OP_NOT_IN))
 #define IS_COMMON_COMPARISON_OP(op) ((op) >= T_OP_EQ && (op) <= T_OP_NE)
 #define IS_SUBQUERY_COMPARISON_OP(op) ((op) >= T_OP_SQ_EQ && (op) <= T_OP_SQ_NE)
-#define IS_ENUM_SET_OP(op) ((op) >= T_FUN_ENUM_TO_STR && (op) <= T_FUN_SET_TO_INNER_TYPE)
+#define IS_ENUM_SET_OP(op) \
+  ((op) >= T_FUN_ENUM_TO_STR && (op) <= T_FUN_SET_TO_INNER_TYPE)
 
 // special statements
-#define IS_TRANSACTION_STMT(op) ((op) == T_BEGIN || (op) == T_COMMIT || (op) == T_ROLLBACK)
-#define IS_PREPARABLE_STMT(op)  \
-  ((op) == T_SELECT || (op) == T_DELETE || (op) == T_INSERT || (op) == T_MERGE || (op) == T_UPDATE \
-   || (op) == T_BEGIN || (op) == T_COMMIT || (op) == T_ROLLBACK)
+#define IS_TRANSACTION_STMT(op) \
+  ((op) == T_BEGIN || (op) == T_COMMIT || (op) == T_ROLLBACK)
+#define IS_PREPARABLE_STMT(op)                                 \
+  ((op) == T_SELECT || (op) == T_DELETE || (op) == T_INSERT || \
+   (op) == T_MERGE || (op) == T_UPDATE || (op) == T_BEGIN ||   \
+   (op) == T_COMMIT || (op) == T_ROLLBACK)
 
-#define IS_DML_STMT(op)  \
-  ((op) == T_SELECT || (op) == T_DELETE || (op) == T_INSERT || (op) == T_MERGE || (op) == T_UPDATE || (op) == T_MULTI_INSERT)
-#define IS_SHOW_STMT(op) (((op) >= T_SHOW_TABLES && (op) <= T_SHOW_GRANTS) || (op) == T_SHOW_TRIGGERS \
-                           || (op) == T_SHOW_PROFILE || (op) == T_SHOW_ENGINE || (op) == T_SHOW_OPEN_TABLES \
-                           || (op) == T_SHOW_CREATE_USER \
-                           || (op) == T_SHOW_CHECK_TABLE)
+#define IS_DML_STMT(op)                                        \
+  ((op) == T_SELECT || (op) == T_DELETE || (op) == T_INSERT || \
+   (op) == T_MERGE || (op) == T_UPDATE || (op) == T_MULTI_INSERT)
+#define IS_SHOW_STMT(op)                                  \
+  (((op) >= T_SHOW_TABLES && (op) <= T_SHOW_GRANTS) ||    \
+   (op) == T_SHOW_TRIGGERS || (op) == T_SHOW_PROFILE ||   \
+   (op) == T_SHOW_ENGINE || (op) == T_SHOW_OPEN_TABLES || \
+   (op) == T_SHOW_CREATE_USER || (op) == T_SHOW_CHECK_TABLE)
 
-#define EXPR_OP_NUM (T_MAX_OP-T_MIN_OP-1)
-extern const char *get_type_name(int type);
+#define EXPR_OP_NUM (T_MAX_OP - T_MIN_OP - 1)
+extern const char* get_type_name(int type);
 
-#define IS_AGGR_FUN(op) (((op) >= T_FUN_MAX && (op) <= T_FUN_APPROX_COUNT_DISTINCT_SYNOPSIS_MERGE) ||\
-                         ((op) >= T_FUN_VAR_POP && (op) <= T_FUN_VAR_SAMP) ||  \
-                         ((op) >= T_FUN_MEDIAN && (op) <= T_FUN_GROUP_PERCENTILE_DISC) ||\
-                         (op) == T_FUN_GROUPING ||\
-                         (op) == T_FUN_WM_CONCAT || (op) == T_FUN_PL_AGG_UDF || \
-                         (op) == T_FUN_TOP_FRE_HIST || (op) == T_FUN_HYBRID_HIST || \
-                         (op) == T_FUN_GROUPING_ID || \
-                         (op) == T_FUN_JSON_ARRAYAGG || (op) == T_FUN_JSON_OBJECTAGG ||\
-                         (op) == T_FUN_ORA_JSON_ARRAYAGG || (op) == T_FUN_ORA_JSON_OBJECTAGG ||\
-                         (op) == T_FUN_GROUP_ID || \
-                         (op) == T_FUN_SYS_ST_ASMVT || \
-                         (op) == T_FUN_SUM_OPNSIZE ||\
-                         (op) == T_FUNC_SYS_ARRAY_AGG ||\
-                         ((op) >= T_FUN_SYS_BIT_AND && (op) <= T_FUN_SYS_BIT_XOR) || \
-                         (op) == T_FUN_INNER_PREFIX_MAX || \
-                         (op) == T_FUN_INNER_PREFIX_MIN || \
-                         ((op) >= T_FUN_ARG_MIN && (op) <= T_FUN_ARG_MAX))
+#define IS_AGGR_FUN(op)                                                   \
+  (((op) >= T_FUN_MAX &&                                                  \
+    (op) <= T_FUN_APPROX_COUNT_DISTINCT_SYNOPSIS_MERGE) ||                \
+   ((op) >= T_FUN_VAR_POP && (op) <= T_FUN_VAR_SAMP) ||                   \
+   ((op) >= T_FUN_MEDIAN && (op) <= T_FUN_GROUP_PERCENTILE_DISC) ||       \
+   (op) == T_FUN_GROUPING || (op) == T_FUN_WM_CONCAT ||                   \
+   (op) == T_FUN_PL_AGG_UDF || (op) == T_FUN_TOP_FRE_HIST ||              \
+   (op) == T_FUN_HYBRID_HIST || (op) == T_FUN_GROUPING_ID ||              \
+   (op) == T_FUN_JSON_ARRAYAGG || (op) == T_FUN_JSON_OBJECTAGG ||         \
+   (op) == T_FUN_ORA_JSON_ARRAYAGG || (op) == T_FUN_ORA_JSON_OBJECTAGG || \
+   (op) == T_FUN_GROUP_ID || (op) == T_FUN_SYS_ST_ASMVT ||                \
+   (op) == T_FUN_SUM_OPNSIZE || (op) == T_FUNC_SYS_ARRAY_AGG ||           \
+   ((op) >= T_FUN_SYS_BIT_AND && (op) <= T_FUN_SYS_BIT_XOR) ||            \
+   (op) == T_FUN_INNER_PREFIX_MAX || (op) == T_FUN_INNER_PREFIX_MIN ||    \
+   ((op) >= T_FUN_ARG_MIN && (op) <= T_FUN_ARG_MAX))
 #define MAYBE_ROW_OP(op) ((op) >= T_OP_EQ && (op) <= T_OP_NE)
-#define IS_PSEUDO_COLUMN_TYPE(op) \
-  ((op) == T_LEVEL || (op) == T_CONNECT_BY_ISLEAF || (op) == T_CONNECT_BY_ISCYCLE || (op) == T_ORA_ROWSCN)
+#define IS_PSEUDO_COLUMN_TYPE(op)                    \
+  ((op) == T_LEVEL || (op) == T_CONNECT_BY_ISLEAF || \
+   (op) == T_CONNECT_BY_ISCYCLE || (op) == T_ORA_ROWSCN)
 
-#define IS_JSON_COMPATIBLE_OP(op) (IS_COMMON_COMPARISON_OP(op) || (op) == T_OP_ROW || (op) == T_OP_LIKE || (op) == T_OP_BTW)
-#define IS_TYPE_DEMOTION_FUN(op) ((T_FUN_SYS_DEMOTE_CAST == (op) || \
-                                   T_FUN_SYS_RANGE_PLACEMENT == (op)))
+#define IS_JSON_COMPATIBLE_OP(op)                                          \
+  (IS_COMMON_COMPARISON_OP(op) || (op) == T_OP_ROW || (op) == T_OP_LIKE || \
+   (op) == T_OP_BTW)
+#define IS_TYPE_DEMOTION_FUN(op) \
+  ((T_FUN_SYS_DEMOTE_CAST == (op) || T_FUN_SYS_RANGE_PLACEMENT == (op)))
 
-#define IS_ARRAY_MAP_OP(op) ((op) == T_FUNC_SYS_ARRAY_MAP || \
-                             (op) == T_FUNC_SYS_ARRAY_FIRST || \
-                             (op) == T_FUNC_SYS_ARRAY_FILTER || \
-                             (op) == T_FUNC_SYS_ARRAY_SORTBY)
+#define IS_ARRAY_MAP_OP(op)                                          \
+  ((op) == T_FUNC_SYS_ARRAY_MAP || (op) == T_FUNC_SYS_ARRAY_FIRST || \
+   (op) == T_FUNC_SYS_ARRAY_FILTER || (op) == T_FUNC_SYS_ARRAY_SORTBY)
 /**
- * @notice: Currently only supports op types defined in the IS_BASIC_CMP_OP macro, if there are requirements outside of this, please extend the implementation of this interface
+ * @notice: Currently only supports op types defined in the IS_BASIC_CMP_OP
+ * macro, if there are requirements outside of this, please extend the
+ * implementation of this interface
  * */
-inline ObItemType get_opposite_compare_type(ObItemType src_type)
-{
+inline ObItemType get_opposite_compare_type(ObItemType src_type) {
   ObItemType ret_type = src_type;
   switch (src_type) {
     case T_OP_LT:
@@ -2461,26 +2471,25 @@ inline ObItemType get_opposite_compare_type(ObItemType src_type)
 }
 #ifndef SQL_PARSER_COMPILATION
 #include "lib/utility/ob_print_utils.h"
-namespace oceanbase
-{
-namespace common
-{
-template<>
-inline int databuff_print_obj(char *buf, const int64_t buf_len, int64_t &pos,
-                              const ObItemType &obj)
-{
-  //ignore ret value on purpose;if failed, the string will be truncated
+namespace oceanbase {
+namespace common {
+template <>
+inline int databuff_print_obj(char* buf, const int64_t buf_len, int64_t& pos,
+                              const ObItemType& obj) {
+  // ignore ret value on purpose;if failed, the string will be truncated
   return databuff_printf(buf, buf_len, pos, "\"%s\"", get_type_name(obj));
 }
 
-template<>
-inline int databuff_print_key_obj(char *buf, const int64_t buf_len, int64_t &pos, const char *key,
-                                  const bool with_comma, const ObItemType &obj)
-{
-  return databuff_printf(buf, buf_len, pos, WITH_COMMA("%s:\"%s\""), key, get_type_name(obj));
+template <>
+inline int databuff_print_key_obj(char* buf, const int64_t buf_len,
+                                  int64_t& pos, const char* key,
+                                  const bool with_comma,
+                                  const ObItemType& obj) {
+  return databuff_printf(buf, buf_len, pos, WITH_COMMA("%s:\"%s\""), key,
+                         get_type_name(obj));
 }
 }  // namespace common
-} // end namespace oceanbase
-#endif // SQL_PARSER_COMPILATION
-#endif //__cplusplus
-#endif //OCEANBASE_SQL_OB_ITEM_TYPE_H_
+}  // end namespace oceanbase
+#endif  // SQL_PARSER_COMPILATION
+#endif  //__cplusplus
+#endif  // OCEANBASE_SQL_OB_ITEM_TYPE_H_
