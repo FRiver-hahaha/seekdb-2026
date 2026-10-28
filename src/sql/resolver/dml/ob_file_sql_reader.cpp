@@ -1709,13 +1709,14 @@ int pq_push_value(common::ObIAllocator &alloc, const int32_t type, const int32_t
                      && PQ_TYPE_FIXED_LEN != type) ? tmp : p;
   const int32_t copy_len = (PQ_TYPE_BYTE_ARRAY == type || PQ_TYPE_FIXED_LEN == type)
                             ? len : out_len;
-  char *dst = static_cast<char *>(alloc.alloc(copy_len > 0 ? copy_len : 1));
+  char *dst = static_cast<char *>(alloc.alloc(copy_len + 1));
   if (OB_ISNULL(dst)) {
     ret = OB_ALLOCATE_MEMORY_FAILED;
   } else {
     if (copy_len > 0) {
       MEMCPY(dst, src, copy_len);
     }
+    dst[copy_len] = '\0';
     if (OB_FAIL(ptrs.push_back(dst))) {
     } else if (OB_FAIL(lens.push_back(copy_len))) {
     }
