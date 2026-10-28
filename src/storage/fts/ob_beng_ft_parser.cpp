@@ -49,15 +49,29 @@ int ObBEngFTParser::get_next_token(
     }
   } else if (OB_ISNULL(token.ptr_) || OB_UNLIKELY(0 >= token.len_ || 0 >= token_freq)) {
     ret = OB_INVALID_ARGUMENT;
-  } else if (OB_ISNULL(buf = static_cast<char *>(allocator_.alloc(token.len_)))) {
-    ret = OB_ALLOCATE_MEMORY_FAILED;
   } else {
-    MEMCPY(buf, token.ptr_, token.len_);
-    word = buf;
-    word_len = token.len_;
-    char_len = token.len_;
-    word_freq = token_freq;
-    LOG_DEBUG("succeed to add word", K(ObString(word_len, word)), K(word_freq));
+    // Token bytes must outlive the analyzer's reusable scratch buffer because the
+    // caller keeps them as word-map keys. Carve them from a larger arena block so
+    // one allocation serves many tokens instead of allocating per token.
+    if (copy_block_used_ + token.len_ > copy_block_capacity_) {
+      const int64_t block_size = token.len_ > 4096 ? token.len_ : 4096;
+      if (OB_ISNULL(copy_block_ = static_cast<char *>(allocator_.alloc(block_size)))) {
+        ret = OB_ALLOCATE_MEMORY_FAILED;
+      } else {
+        copy_block_capacity_ = block_size;
+        copy_block_used_ = 0;
+      }
+    }
+    if (OB_SUCC(ret)) {
+      buf = copy_block_ + copy_block_used_;
+      MEMCPY(buf, token.ptr_, token.len_);
+      copy_block_used_ += token.len_;
+      word = buf;
+      word_len = token.len_;
+      char_len = token.len_;
+      word_freq = token_freq;
+      LOG_DEBUG("succeed to add word", K(ObString(word_len, word)), K(word_freq));
+    }
   }
   return ret;
 }
@@ -110,6 +124,9 @@ void ObBEngFTParser::reset()
   english_analyzer_.reset();
   doc_.reset();
   token_stream_ = nullptr;
+  copy_block_ = nullptr;
+  copy_block_capacity_ = 0;
+  copy_block_used_ = 0;
   is_inited_ = false;
 }
 
