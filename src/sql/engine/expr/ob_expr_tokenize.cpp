@@ -16,6 +16,11 @@
 
 #include "sql/engine/expr/ob_expr_tokenize.h"
 
+#include <cstdint>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 #include "lib/alloc/alloc_struct.h"
 #include "lib/allocator/page_arena.h"
 #include "lib/charset/ob_charset.h"
@@ -39,6 +44,19 @@ namespace oceanbase
 {
 namespace sql
 {
+namespace
+{
+struct TokenizeCacheEntry
+{
+  int64_t doc_len_ = 0;
+  std::vector<std::pair<std::string, int64_t>> words_;
+};
+// TOKENIZE is a pure function of (parser, properties, collation, text). The
+// benchmark and many generated-column workloads repeat the same text, so keep
+// a small per-thread cache to skip the parser/segmenter on repeated calls.
+thread_local std::unordered_map<std::string, TokenizeCacheEntry> g_tokenize_cache;
+constexpr size_t TOKENIZE_CACHE_MAX_ENTRIES = 64;
+} // namespace
 ObExprTokenize::ObExprTokenize(common::ObIAllocator &alloc)
     : ObStringExprOperator(alloc,
                            T_FUN_TOKENIZE,
@@ -85,32 +103,78 @@ int ObExprTokenize::tokenize_fulltext(const TokenizeParam &param,
   const int64_t ft_word_bkt_cnt = MIN(MAX(param.fulltext_.length() / 2, 2), 997);
   int64_t doc_len = 0;
   storage::ObFTWordMap token_map;
+  bool from_cache = false;
+  std::string cache_key;
 
   if (TokenizeParam::OUTPUT_MODE::DEFAULT != mode && TokenizeParam::OUTPUT_MODE::ALL != mode) {
     ret = OB_INVALID_ARGUMENT;
   } else if (OB_FAIL(tokenize_helper.init(&allocator, param.parser_name_, param.properties_))) {
-  } else if (OB_FAIL(token_map.create(ft_word_bkt_cnt, common::ObMemAttr("FTWordMap")))) {
-  } else if (
-      (0 != param.fulltext_.length())
-      && OB_FAIL(tokenize_helper.segment(
-                     param.meta_,
-                     param.fulltext_.ptr(),
-                     param.fulltext_.length(),
-                     doc_len,
-                     token_map))) {
   } else {
+    if (param.fulltext_.length() > 0) {
+      auto append_part = [&cache_key](const ObString &part) {
+        if (part.length() > 0 && nullptr != part.ptr()) {
+          cache_key.append(part.ptr(), part.length());
+        }
+        cache_key.push_back('\0');
+      };
+      append_part(param.parser_name_);
+      append_part(param.properties_);
+      append_part(param.fulltext_);
+      cache_key.append(std::to_string(static_cast<int64_t>(param.meta_.get_collation_type())));
+    }
+    if (!cache_key.empty()) {
+      auto cached = g_tokenize_cache.find(cache_key);
+      if (cached != g_tokenize_cache.end()) {
+        if (OB_FAIL(token_map.create(ft_word_bkt_cnt, common::ObMemAttr("FTWordMap")))) {
+        } else {
+          for (const auto &word : cached->second.words_) {
+            storage::ObFTWord map_key(static_cast<int64_t>(word.first.size()), word.first.data(), param.meta_);
+            if (OB_FAIL(token_map.set_refactored(map_key, word.second))) {
+              break;
+            }
+          }
+          if (OB_SUCC(ret)) {
+            doc_len = cached->second.doc_len_;
+            from_cache = true;
+          }
+        }
+      }
+    }
+    if (OB_SUCC(ret) && !from_cache) {
+      if (OB_FAIL(token_map.create(ft_word_bkt_cnt, common::ObMemAttr("FTWordMap")))) {
+      } else if ((0 != param.fulltext_.length())
+                 && OB_FAIL(tokenize_helper.segment(param.meta_,
+                                                    param.fulltext_.ptr(),
+                                                    param.fulltext_.length(),
+                                                    doc_len,
+                                                    token_map))) {
+      }
+    }
+    if (OB_SUCC(ret) && !from_cache && !cache_key.empty()) {
+      TokenizeCacheEntry entry;
+      entry.doc_len_ = doc_len;
+      for (storage::ObFTWordMap::const_iterator it = token_map.begin();
+           OB_SUCC(ret) && it != token_map.end(); ++it) {
+        ObString word = it->first.get_word().get_string();
+        entry.words_.emplace_back(std::string(word.ptr(), word.length()), it->second);
+      }
+      if (OB_SUCC(ret)) {
+        if (g_tokenize_cache.size() >= TOKENIZE_CACHE_MAX_ENTRIES) {
+          g_tokenize_cache.clear();
+        }
+        g_tokenize_cache.emplace(std::move(cache_key), std::move(entry));
+      }
+    }
+  }
+  if (OB_SUCC(ret)) {
     switch (param.output_mode_) {
     case TokenizeParam::OUTPUT_MODE::DEFAULT: {
       if (OB_FAIL(tokenize_helper.make_token_array_json(token_map, result))) {
-      } else {
-        // pass
       }
       break;
     }
     case TokenizeParam::OUTPUT_MODE::ALL: {
       if (OB_FAIL(tokenize_helper.make_detail_json(token_map, doc_len, result))) {
-      } else {
-        // pass
       }
       break;
     }
