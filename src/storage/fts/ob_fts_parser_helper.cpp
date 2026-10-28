@@ -18,6 +18,11 @@
 #include "storage/fts/ob_fts_struct.h"
 #define USING_LOG_PREFIX STORAGE_FTS
 
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 #include "storage/fts/ob_fts_parser_helper.h"
 
 #include "common/json_type/ob_json_tree.h"
@@ -35,6 +40,20 @@ namespace oceanbase
 {
 namespace storage
 {
+
+namespace
+{
+struct CachedSegment
+{
+  int64_t doc_len_ = 0;
+  std::vector<std::pair<std::string, int64_t>> words_;
+};
+// Per-thread memoization avoids locking on the FTS hot path. It catches the
+// repeated query strings and the same worker re-tokenizing a document for a
+// second index build.
+thread_local std::unordered_map<std::string, std::shared_ptr<CachedSegment>> g_segment_cache;
+constexpr size_t SEGMENT_CACHE_MAX_ENTRIES = 4096;
+} // namespace
 
 const char *ObFTParser::NAME_STR[ObFTParser::ParserType::FTP_MAX] = {
 #define FT_PARSER_TYPE(ftp_type, parser_name) #parser_name,
@@ -368,6 +387,8 @@ int ObFTParseHelper::segment(
   int ret = OB_SUCCESS;
   const ObCharsetInfo *cs = nullptr;
   ObCollationType type = meta.get_collation_type();
+  std::string cache_key;
+  std::shared_ptr<CachedSegment> cached;
   if (OB_UNLIKELY(!is_inited_)) {
     ret = OB_NOT_INIT;
   } else if (OB_ISNULL(allocator_)) {
@@ -377,19 +398,54 @@ int ObFTParseHelper::segment(
   } else if (OB_ISNULL(cs = common::ObCharset::get_charset(type))) {
     ret = OB_ERR_UNEXPECTED;
   } else {
-    words.reuse();
-    ObAddWord add_word(parser_property_, meta, add_word_flag_, *allocator_, words);
-    if (OB_FAIL(segment(
-                    parser_property_,
-                    parser_name_.get_parser_version(),
-                    parser_desc_,
-                    cs,
-                    fulltext,
-                    fulltext_len,
-                    *allocator_,
-                    add_word))) {
+    if (fulltext_len > 0 && nullptr != fulltext) {
+      cache_key.append(parser_name_.get_parser_name().str());
+      cache_key.push_back('\0');
+      cache_key.append(std::to_string(static_cast<int64_t>(type)));
+      cache_key.push_back('\0');
+      cache_key.append(fulltext, fulltext_len);
+      auto cached_it = g_segment_cache.find(cache_key);
+      if (cached_it != g_segment_cache.end()) {
+        cached = cached_it->second;
+      }
+    }
+    if (nullptr != cached) {
+      words.reuse();
+      for (const auto &word : cached->words_) {
+        ObFTWord map_key(static_cast<int64_t>(word.first.size()), word.first.data(), meta);
+        if (OB_FAIL(words.set_refactored(map_key, word.second))) {
+          break;
+        }
+      }
+      if (OB_SUCC(ret)) {
+        doc_length = cached->doc_len_;
+      }
     } else {
-      doc_length = add_word.get_add_word_count();
+      words.reuse();
+      ObAddWord add_word(parser_property_, meta, add_word_flag_, *allocator_, words);
+      if (OB_FAIL(segment(
+                      parser_property_,
+                      parser_name_.get_parser_version(),
+                      parser_desc_,
+                      cs,
+                      fulltext,
+                      fulltext_len,
+                      *allocator_,
+                      add_word))) {
+      } else {
+        doc_length = add_word.get_add_word_count();
+        if (!cache_key.empty() && g_segment_cache.size() < SEGMENT_CACHE_MAX_ENTRIES) {
+          std::shared_ptr<CachedSegment> entry = std::make_shared<CachedSegment>();
+          entry->doc_len_ = doc_length;
+          for (ObFTWordMap::const_iterator it = words.begin(); OB_SUCC(ret) && it != words.end(); ++it) {
+            ObString word = it->first.get_word().get_string();
+            entry->words_.emplace_back(std::string(word.ptr(), word.length()), it->second);
+          }
+          if (OB_SUCC(ret)) {
+            g_segment_cache.emplace(std::move(cache_key), std::move(entry));
+          }
+        }
+      }
     }
   }
   LOG_DEBUG("ft parse segment", K(ret), K(type), K(add_word_flag_), K(parser_name_),
