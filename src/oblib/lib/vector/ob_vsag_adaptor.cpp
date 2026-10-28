@@ -20,7 +20,6 @@
 #include <map>
 #include <set>
 #include <mutex>
-#include <new>
 #include <vector>
 #include <cstdlib>
 #include <cstdio>
@@ -76,78 +75,11 @@ struct ObCuvsEntry {
   std::vector<float> buf_vecs_; // accumulated vectors (row-major) from add_index
   std::vector<int64_t> buf_ids_;// accumulated external vids from add_index
   size_t built_n_ = 0;          // #vectors present when cuVS was last (re)built
-  pthread_t build_tid_{};       // background build thread for bulk add_index
-  bool build_started_ = false;
-  bool build_joined_ = true;
 };
 static std::mutex g_ob_cuvs_mu;
 static std::map<void *, ObCuvsEntry *> g_ob_cuvs_reg;
 static std::mutex g_ob_cuvs_marked_mu;
 static std::set<void *> g_ob_cuvs_marked;  // handles of lib=cuvs indexes (marked by the plugin)
-static const size_t OB_CUVS_MIN_PTS = 256;  // CAGRA needs a graph; below this -> VSAG
-// Defined below; the async builder needs to emit the same build trace as the
-// synchronous lazy-build path so GPU-path validation can see it.
-static inline void ob_vsag_trace(const char *fn, const void *h, long a, long b);
-// A bulk add_index call already carries the full snapshot. Building CAGRA on a
-// background thread overlaps the (GPU) graph build with the (CPU) VSAG HNSW
-// build that add_index performs immediately afterwards. The first query joins
-// the build, so the measured build still includes GPU completion.
-struct ObCuvsAsyncBuildArgs {
-  void *key;
-  ObCuvsEntry *owner;
-  int dim;
-  size_t n;
-  std::vector<float> vecs;
-  std::vector<int64_t> ids;
-};
-static void *ob_cuvs_async_build(void *arg) {
-  ObCuvsAsyncBuildArgs *args = static_cast<ObCuvsAsyncBuildArgs *>(arg);
-  void *bridge = seekdb_cuvs_build(args->vecs.data(), static_cast<long>(args->n), args->dim);
-  {
-    std::lock_guard<std::mutex> guard(g_ob_cuvs_mu);
-    auto it = g_ob_cuvs_reg.find(args->key);
-    if (it != g_ob_cuvs_reg.end() && it->second == args->owner) {
-      ObCuvsEntry *ent = it->second;
-      if (bridge != nullptr) {
-        if (ent->bridge_ != nullptr) { seekdb_cuvs_free(ent->bridge_); }
-        ent->bridge_ = bridge;
-        ent->ids_ = args->ids;
-        ent->built_n_ = args->n;
-        ent->dim_ = args->dim;
-        ob_vsag_trace("cuvs_build", args->key, args->dim, static_cast<long>(args->n));
-      }
-    } else if (bridge != nullptr) {
-      seekdb_cuvs_free(bridge);
-    }
-  }
-  delete args;
-  return nullptr;
-}
-// Called with g_ob_cuvs_mu held, after the full snapshot has been buffered.
-static bool ob_cuvs_launch_async_build(void *key, ObCuvsEntry *ent, int dim, size_t n) {
-  ObCuvsAsyncBuildArgs *args = new (std::nothrow) ObCuvsAsyncBuildArgs();
-  if (args == nullptr) { return false; }
-  args->key = key;
-  args->owner = ent;
-  args->dim = dim;
-  args->n = n;
-  args->vecs = ent->buf_vecs_;
-  args->ids = ent->buf_ids_;
-  pthread_attr_t attr;
-  pthread_attr_init(&attr);
-  pthread_attr_setstacksize(&attr, 32UL * 1024 * 1024);
-  pthread_t tid;
-  const int rc = pthread_create(&tid, &attr, ob_cuvs_async_build, args);
-  pthread_attr_destroy(&attr);
-  if (rc != 0) {
-    delete args;
-    return false;
-  }
-  ent->build_tid_ = tid;
-  ent->build_started_ = true;
-  ent->build_joined_ = false;
-  return true;
-}
 // GPU backend available? (used by the explicit dbms_vector.batch_knn path)
 static inline bool ob_cuvs_enabled() {
 #ifdef OB_BUILD_CUVS
@@ -191,21 +123,10 @@ static void ob_cuvs_register(void *key, const float *vectors, const int64_t *ids
   if (bridge == nullptr) { return; }
   ObCuvsEntry *ent = new ObCuvsEntry();
   ent->bridge_ = bridge; ent->dim_ = dim; ent->ids_.assign(ids, ids + size);
-  ObCuvsEntry *old = nullptr;
-  {
-    std::lock_guard<std::mutex> guard(g_ob_cuvs_mu);
-    ObCuvsEntry *&slot = g_ob_cuvs_reg[key];
-    old = slot;
-    slot = ent;
-  }
-  if (old != nullptr) {
-    if (old->build_started_ && !old->build_joined_) {
-      old->build_joined_ = true;
-      pthread_join(old->build_tid_, nullptr);
-    }
-    if (old->bridge_ != nullptr) { seekdb_cuvs_free(old->bridge_); }
-    delete old;
-  }
+  std::lock_guard<std::mutex> guard(g_ob_cuvs_mu);
+  ObCuvsEntry *&slot = g_ob_cuvs_reg[key];
+  if (slot != nullptr) { seekdb_cuvs_free(slot->bridge_); delete slot; }
+  slot = ent;
 }
 // Buffer vectors arriving via add_index. Plain HNSW builds BOTH its delta and its
 // snapshot incrementally via add_index (one row at a time), so this is where the
@@ -221,30 +142,9 @@ static void ob_cuvs_add(void *key, const float *vectors, const int64_t *ids,
   slot->buf_vecs_.insert(slot->buf_vecs_.end(), vectors,
                          vectors + static_cast<size_t>(dim) * size);
   slot->buf_ids_.insert(slot->buf_ids_.end(), ids, ids + size);
-  // The snapshot path calls add_index once with the whole index (n == size).
-  // Start the GPU build before the CPU VSAG HNSW build runs; the query path
-  // joins it. Smaller/delta calls stay on the existing lazy-build path.
-  const size_t n = slot->buf_ids_.size();
-  if (slot->bridge_ == nullptr && !slot->build_started_ &&
-      static_cast<size_t>(size) >= 4096 && n == static_cast<size_t>(size) &&
-      n >= OB_CUVS_MIN_PTS) {
-    ob_cuvs_launch_async_build(key, slot, dim, n);
-  }
 }
 static void ob_cuvs_erase(void *key) {
   { std::lock_guard<std::mutex> mg(g_ob_cuvs_marked_mu); g_ob_cuvs_marked.erase(key); }
-  pthread_t build_tid;
-  bool wait_for_build = false;
-  {
-    std::lock_guard<std::mutex> guard(g_ob_cuvs_mu);
-    auto it = g_ob_cuvs_reg.find(key);
-    if (it != g_ob_cuvs_reg.end() && it->second->build_started_ && !it->second->build_joined_) {
-      build_tid = it->second->build_tid_;
-      it->second->build_joined_ = true;
-      wait_for_build = true;
-    }
-  }
-  if (wait_for_build) { pthread_join(build_tid, nullptr); }
   std::lock_guard<std::mutex> guard(g_ob_cuvs_mu);
   auto it = g_ob_cuvs_reg.find(key);
   if (it != g_ob_cuvs_reg.end()) {
@@ -324,25 +224,13 @@ static void *ob_cuvs_raw_batch_job(void *arg) {
   return nullptr;
 }
 
+static const size_t OB_CUVS_MIN_PTS = 256;  // CAGRA needs a graph; below this -> VSAG
+
 static bool ob_cuvs_try_search(void *key, vsag::Allocator *alloc,
                                const float *query, int /*dim*/, int64_t topk,
                                const float *&dist, const int64_t *&ids,
                                int64_t &result_size, void *filter, bool reverse_filter) {
   if (topk <= 0) { return false; }
-  pthread_t build_tid;
-  bool wait_for_build = false;
-  {
-    std::lock_guard<std::mutex> guard(g_ob_cuvs_mu);
-    auto it = g_ob_cuvs_reg.find(key);
-    if (it == g_ob_cuvs_reg.end()) { return false; }
-    ObCuvsEntry *ent = it->second;
-    if (ent->build_started_ && !ent->build_joined_) {
-      build_tid = ent->build_tid_;
-      ent->build_joined_ = true;
-      wait_for_build = true;
-    }
-  }
-  if (wait_for_build) { pthread_join(build_tid, nullptr); }
   std::lock_guard<std::mutex> guard(g_ob_cuvs_mu);
   auto it = g_ob_cuvs_reg.find(key);
   if (it == g_ob_cuvs_reg.end()) { return false; }
@@ -1856,20 +1744,6 @@ long cuvs_knn_search_batch(void *key, const float *queries, long nq, long topk,
 {
   if (key == nullptr || queries == nullptr || out_ids == nullptr ||
       out_dist == nullptr || nq <= 0 || topk <= 0) { return 0; }
-  pthread_t build_tid;
-  bool wait_for_build = false;
-  {
-    std::lock_guard<std::mutex> guard(g_ob_cuvs_mu);
-    auto it = g_ob_cuvs_reg.find(key);
-    if (it == g_ob_cuvs_reg.end()) { return 0; }
-    ObCuvsEntry *ent = it->second;
-    if (ent->build_started_ && !ent->build_joined_) {
-      build_tid = ent->build_tid_;
-      ent->build_joined_ = true;
-      wait_for_build = true;
-    }
-  }
-  if (wait_for_build) { pthread_join(build_tid, nullptr); }
   std::lock_guard<std::mutex> guard(g_ob_cuvs_mu);
   auto it = g_ob_cuvs_reg.find(key);
   if (it == g_ob_cuvs_reg.end()) { return 0; }
