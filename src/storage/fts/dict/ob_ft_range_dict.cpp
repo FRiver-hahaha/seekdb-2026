@@ -381,23 +381,33 @@ int ObFTRangeDict::match_with_hit(const ObString &single_word,
 int ObFTRangeDict::find_first_char_range(const ObString &single_word, ObIFTDict *&dict) const
 {
   int ret = OB_SUCCESS;
-  bool found = false;
-  for (int i = 0; OB_SUCC(ret) && !found && i < range_dicts_.size(); ++i) {
+  // The ranges come from one ascending pass over the sorted dictionary, so range_dicts_
+  // is sorted by start_ and its entries do not overlap.
+  const int64_t count = range_dicts_.size();
+  int64_t left = 0;
+  int64_t right = count - 1;
+  int64_t candidate = -1;
+  dict = nullptr;
+  while (left <= right) {
+    const int64_t mid = left + (right - left) / 2;
     if (ObCharset::strcmp(ObCollationType::CS_TYPE_UTF8MB4_BIN,
-                          range_dicts_[i].start_.get_word(),
-                          single_word)
-            <= 0
-        && ObCharset::strcmp(ObCollationType::CS_TYPE_UTF8MB4_BIN,
-                             range_dicts_[i].end_.get_word(),
-                             single_word)
-               >= 0) {
-      dict = range_dicts_[i].dict_;
-      found = true;
+                          range_dicts_[mid].start_.get_word(),
+                          single_word) <= 0) {
+      candidate = mid;
+      left = mid + 1;
+    } else {
+      right = mid - 1;
     }
   }
-  if (!found) {
+  if (candidate < 0
+      || ObCharset::strcmp(ObCollationType::CS_TYPE_UTF8MB4_BIN,
+                           range_dicts_[candidate].end_.get_word(),
+                           single_word)
+             < 0) {
     // not found, dis match
     ret = OB_ENTRY_NOT_EXIST;
+  } else {
+    dict = range_dicts_[candidate].dict_;
   }
   return ret;
 }

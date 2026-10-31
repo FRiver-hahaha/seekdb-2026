@@ -17,8 +17,10 @@
 #ifndef _OCEANBASE_STORAGE_FTS_DICT_OB_FT_DICT_HUB_H_
 #define _OCEANBASE_STORAGE_FTS_DICT_OB_FT_DICT_HUB_H_
 
+#include "lib/allocator/page_arena.h"
 #include "lib/charset/ob_charset.h"
 #include "lib/lock/ob_bucket_lock.h"
+#include "lib/lock/ob_mutex.h"
 #include "storage/fts/dict/ob_ft_dict_def.h"
 
 namespace oceanbase
@@ -93,10 +95,19 @@ private:
 };
 
 class ObFTCacheRangeContainer;
+class ObIFTDict;
 class ObFTDictHub
 {
 public:
-  ObFTDictHub() : is_inited_(false), dict_map_(), rw_dict_lock_() {}
+  ObFTDictHub()
+      : is_inited_(false),
+        dict_map_(),
+        shared_dict_map_(),
+        dict_alloc_(lib::ObMemAttr("FTDictShared")),
+        rw_dict_lock_(),
+        build_lock_()
+  {
+  }
   ~ObFTDictHub() {}
 
   int init();
@@ -107,18 +118,44 @@ public:
 
   int load_cache(const ObFTDictDesc &desc, ObFTCacheRangeContainer &container);
 
+  // Return the dictionary instance built for @desc, creating it on first use. The built
+  // instance only reads from the dictionary cache, so every caller can share it read-only
+  // instead of rebuilding the range dictionaries per document.
+  int get_shared_dict(const ObFTDictDesc &desc, ObIFTDict *&dict);
+
 private:
+  struct SharedDict
+  {
+    SharedDict(ObFTCacheRangeContainer *container, ObIFTDict *dict)
+        : container_(container), dict_(dict)
+    {
+    }
+    ~SharedDict() {}
+    ObFTCacheRangeContainer *container_;
+    ObIFTDict *dict_;
+  };
+
   int get_dict_info(const ObFTDictInfoKey &key, ObFTDictInfo &info);
 
   int put_dict_info(const ObFTDictInfoKey &key, const ObFTDictInfo &info);
 
+  int lookup_shared_dict(const ObFTDictInfoKey &key, SharedDict *&shared);
+
+  int publish_shared_dict(const ObFTDictInfoKey &key, SharedDict *shared);
+
+  int build_shared_dict(const ObFTDictDesc &desc, SharedDict *&shared);
 
 private:
   bool is_inited_;
   // holds info of dict
   hash::ObHashMap<ObFTDictInfoKey, ObFTDictInfo> dict_map_;
+  hash::ObHashMap<ObFTDictInfoKey, SharedDict *> shared_dict_map_;
+  // owns the shared dictionary objects for the lifetime of the server
+  common::ObArenaAllocator dict_alloc_;
   ObBucketLock rw_dict_lock_;
-};
+  // serializes shared dictionary creation; the bucket lock is taken by the cache
+  // primitives called from here, so it must not be held while building
+  lib::ObMutex build_lock_;};
 
 } //  namespace storage
 } //  namespace oceanbase
