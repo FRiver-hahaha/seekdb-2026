@@ -381,8 +381,8 @@ int ObFTRangeDict::match_with_hit(const ObString &single_word,
 int ObFTRangeDict::find_first_char_range(const ObString &single_word, ObIFTDict *&dict) const
 {
   int ret = OB_SUCCESS;
-  // The ranges come from one ascending pass over the sorted dictionary, so range_dicts_
-  // is sorted by start_ and its entries do not overlap.
+  // build_dict_from_cache() orders range_dicts_ by start_ and the ranges of one dictionary
+  // never overlap, because a range only ends where the first character changes.
   const int64_t count = range_dicts_.size();
   int64_t left = 0;
   int64_t right = count - 1;
@@ -431,6 +431,20 @@ int ObFTRangeDict::build_dict_from_cache(const ObFTCacheRangeContainer &range_co
       if (OB_FAIL(range_dicts_.push_back(range))) {
       }
     }
+  }
+  // find_first_char_range() binary-searches on start_, so order it here instead of relying on
+  // the dictionary arrays being generated in collation order -- they are not always.
+  for (int64_t i = 1; i < range_dicts_.size(); ++i) {
+    ObFTRange moving = range_dicts_[i];
+    int64_t j = i - 1;
+    while (j >= 0
+           && ObCharset::strcmp(ObCollationType::CS_TYPE_UTF8MB4_BIN,
+                                range_dicts_[j].start_.get_word(),
+                                moving.start_.get_word()) > 0) {
+      range_dicts_[j + 1] = range_dicts_[j];
+      --j;
+    }
+    range_dicts_[j + 1] = moving;
   }
   return ret;
 }

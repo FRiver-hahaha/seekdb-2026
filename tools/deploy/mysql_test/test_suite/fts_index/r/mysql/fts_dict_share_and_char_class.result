@@ -1,0 +1,215 @@
+DROP TABLE IF EXISTS fts_shared_dict_table;
+DROP TABLE IF EXISTS fts_char_class_table;
+alter system set _enable_add_fulltext_index_to_existing_table = true;
+=========================================================================================
+== Part 1: character classification. Each CharType branch of do_classify is exercised by
+== a distinct input, because the rewrite decodes the code point once instead of once per
+== predicate, and an off-by-one in that decode changes which branch a character takes.
+=========================================================================================
+CREATE TABLE fts_char_class_table (
+id INT AUTO_INCREMENT PRIMARY KEY,
+txt VARCHAR(256)
+) DEFAULT CHARSET utf8mb4;
+INSERT INTO fts_char_class_table(txt) VALUES
+('OceanBase是一款非常稳定的数据库'),
+('全角ＢＣＤ与ｱＢＣＤ测试'),
+('カタカナとひらがな'),
+('한국어 테스트'),
+('café 你好，世界！12345 67.89%'),
+('مرحبا بالعربية'),
+('1.2亿用户 all-in-one email@example.com'),
+('一龻鿿㐀');
+== ENGLISH_LETTER / mixed alnum runs stay joined, punctuation splits them
+SELECT tokenize('OceanBase是一款非常稳定的数据库', 'ik');
+tokenize('OceanBase是一款非常稳定的数据库', 'ik')
+["非常", "oceanbase", "稳定", "是", "数据库", "的", "一款"]
+== OTHER_CJK: half-width katakana and full-width latin are handled by their own ranges
+SELECT tokenize('ｱＢｃｄ全角テスト', 'ik');
+tokenize('ｱＢｃｄ全角テスト', 'ik')
+["ｱ", "ト", "ｂｃｄ", "テ", "全角", "ス"]
+== OTHER_CJK: kana and hangul are not merged with Chinese words
+SELECT tokenize('カタカナとひらがな', 'ik');
+tokenize('カタカナとひらがな', 'ik')
+["ら", "ひ", "と", "な", "タ", "ナ", "カ", "が"]
+SELECT tokenize('한국어 테스트', 'ik');
+tokenize('한국어 테스트', 'ik')
+["테", "국", "트", "한", "어", "스"]
+== USELESS chars (space, CJK and ASCII punctuation) are dropped, digits keep . and %
+SELECT tokenize('café 你好，世界！12345 67.89%', 'ik');
+tokenize('café 你好，世界！12345 67.89%', 'ik')
+["67.89", "12345", "caf", "世界", "你好"]
+== ARABIC_LETTER runs are tokenized without touching the Chinese dictionaries
+SELECT tokenize('مرحبا بالعربية', 'ik');
+tokenize('مرحبا بالعربية', 'ik')
+[]
+== quantifier dictionary path: 1.2亿 and the hyphen/dot joined english tokens
+SELECT tokenize('1.2亿用户 all-in-one email@example.com', 'ik');
+tokenize('1.2亿用户 all-in-one email@example.com', 'ik')
+["用户", "email@example.com", "all-in-one", "1.2亿"]
+== single characters spanning the first and the last code point of the CJK blocks, which
+== is what the range lookup boundary looks like
+SELECT tokenize('一龻鿿㐀', 'ik');
+tokenize('一龻鿿㐀', 'ik')
+["鿿", "㐀", "龻", "一"]
+== same corpus through beng, where classification decides word joining instead of length
+SELECT tokenize('1.2亿用户 all-in-one email@example.com', 'beng');
+tokenize('1.2亿用户 all-in-one email@example.com', 'beng')
+["example", "all", "2亿用户", "email", "one"]
+SELECT tokenize('Hello-world all-in-one 1.2亿 email@example.com', 'beng');
+tokenize('Hello-world all-in-one 1.2亿 email@example.com', 'beng')
+["example", "all", "world", "hello", "2亿", "email", "one"]
+=========================================================================================
+== Part 2: one dictionary instance per (parser, mode) is shared by every document.
+== Rows alternate character classes, so state left behind in a shared dictionary or in a
+== reused parser between documents would change a later row. Building a second and third
+== IK index on the same table, and rebuilding one, must produce identical tokens and
+== match counts.
+=========================================================================================
+CREATE TABLE fts_shared_dict_table (
+id INT AUTO_INCREMENT PRIMARY KEY,
+title VARCHAR(256),
+body  VARCHAR(1024)
+) DEFAULT CHARSET utf8mb4;
+INSERT INTO fts_shared_dict_table(title, body) VALUES
+('晨曦中的问候', '在每一个新的早晨，当第一缕阳光洒进窗户，一句温暖的问候能够传递出关怀与尊重，让对方感受到一天的美好从这里开始。'),
+('Friendship lasts', 'True friendship does not fade with time or distance, it becomes stronger after years of shared experience and mutual support.'),
+('感恩的心', '当我们接受他人的帮助或是经历了生活中的点滴幸运时，谢谢这两个字不仅仅是礼貌性的回应，更是内心感激之情的真实写照。'),
+('Mixed content', 'OceanBase 是一款稳定的分布式数据库，全文索引依赖分词器热路径的效率，查询则依赖倒排索引的合并。'),
+('车站的告别', '火车站是一个充满故事的地方，人们在这里相遇又分离，每一次的告别都带着不同的感情，也蕴含着对再次相见的盼望。'),
+('数量与单位', '本季度营收达到1.2亿元，同比增长37.5%，覆盖200多个国家和地区。'),
+('カタカナ', 'レストランでカタカナとひらがなを混在させて注文するテストです。'),
+('全文索引', 'Full-text search depends on tokenizer reuse and inverted index merge on the hot path.');
+SELECT tokenize(title, 'ik') FROM fts_shared_dict_table ORDER BY id;
+tokenize(title, 'ik')
+["问候", "中", "晨曦", "的"]
+["lasts", "friendship"]
+["心", "感恩", "的"]
+["mixed", "content"]
+["车站", "告别", "的"]
+["数量", "单位", "与"]
+["タ", "ナ", "カ"]
+["全文索引"]
+SELECT tokenize(body, 'ik') FROM fts_shared_dict_table ORDER BY id;
+tokenize(body, 'ik')
+["阳光", "问候", "当", "从", "让", "传递", "洒", "与", "能够", "感受到", "开始", "对方", "第一缕", "一天", "温暖", "早晨", "的", "尊重", "进", "美好", "出", "关怀", "窗户", "新", "在", "这里", "一句", "每一个"]
+["or", "it", "years", "true", "of", "stronger", "support.", "mutual", "experience", "fade", "friendship", "time", "does", "distance", "with", "becomes", "shared", "not", "after", "and"]
+["内心", "我们", "回应", "之情", "时", "中", "经历", "了", "当", "真实写照", "不仅仅是", "他人", "生活", "帮助", "礼貌性", "的", "或是", "谢谢", "更是", "幸运", "接受", "感激", "这两个字", "点滴"]
+["倒排", "oceanbase", "全文索引", "一款", "热", "合并", "分词器", "稳定", "则", "索引", "的", "分布式数据库", "路径", "依赖", "查询", "效率", "是"]
+["地方", "火车站", "感情", "都", "又", "对", "充满", "一个", "相遇", "再次", "相见", "的", "蕴含着", "盼望", "也", "每一次", "不同", "人们", "故事", "在这里", "分离", "带着", "是", "告别"]
+["达到", "覆盖", "本季度", "37.5", "200", "同比", "多个", "亿元", "营", "增长", "国家和地区", "1.2", "收"]
+["ら", "す", "ひ", "と", "で", "ン", "な", "タ", "ナ", "ト", "カ", "混在", "る", "レ", "さ", "ラ", "注文", "テ", "が", "を", "て", "ス", "せ"]
+["full-text", "merge", "on", "depends", "tokenizer", "hot", "reuse", "index", "inverted", "and", "path.", "search", "the"]
+CREATE FULLTEXT INDEX fti_smart_title ON fts_shared_dict_table(title) WITH PARSER ik PARSER_PROPERTIES=(ik_mode="smart");
+CREATE FULLTEXT INDEX fti_smart_body ON fts_shared_dict_table(body) WITH PARSER ik PARSER_PROPERTIES=(ik_mode="smart");
+CREATE FULLTEXT INDEX fti_maxword_all ON fts_shared_dict_table(title, body) WITH PARSER ik PARSER_PROPERTIES=(ik_mode="max_word");
+SELECT COUNT(*) FROM fts_shared_dict_table WHERE MATCH(title) AGAINST('问候');
+COUNT(*)
+1
+SELECT COUNT(*) FROM fts_shared_dict_table WHERE MATCH(body) AGAINST('数据库');
+COUNT(*)
+0
+SELECT COUNT(*) FROM fts_shared_dict_table WHERE MATCH(body) AGAINST('全文索引 分词器');
+COUNT(*)
+1
+SELECT COUNT(*) FROM fts_shared_dict_table WHERE MATCH(body) AGAINST('车站');
+COUNT(*)
+0
+SELECT COUNT(*) FROM fts_shared_dict_table WHERE MATCH(title, body) AGAINST('friendship');
+COUNT(*)
+1
+== max_word and smart share nothing, so both dictionaries live in the hub at once and are
+== chosen by the index that owns the parser properties
+SELECT tokenize(body, 'ik', '[{"additional_args": [{"ik_mode": "max_word"}]}]') FROM fts_shared_dict_table ORDER BY id;
+tokenize(body, 'ik', '[{"additional_args": [{"ik_mode": "max_word"}]}]')
+["出关", "阳光", "缕", "句", "问候", "当", "让", "传递", "洒", "一缕", "与", "能够", "感受到", "一", "开始", "受到", "一个", "对方", "一天", "温暖", "第一", "个", "早晨", "的", "尊重", "进", "感受", "从这", "天", "美好", "关怀", "窗户", "新", "在", "递出", "这里", "一句", "每一个"]
+["or", "it", "years", "true", "of", "stronger", "support.", "mutual", "support", "experience", "fade", "friendship", "time", "does", "distance", "with", "becomes", "shared", "not", "after", "and"]
+["内心", "我们", "回应", "之情", "时", "不仅仅", "中", "经历", "仅仅", "了", "真实", "这两个", "真实写照", "不仅仅是", "字", "礼貌", "他人", "生活", "帮助", "礼貌性", "两个字", "个", "的", "两", "个字", "或是", "不仅", "谢谢", "更是", "幸运", "接受", "当我", "感激", "仅仅是", "性", "写照", "仅是", "两个", "点滴"]
+["倒排", "oceanbase", "分布", "全文索引", "一款", "数据", "分布式", "热", "合并", "分词器", "款", "库", "全文", "一", "稳定", "则", "索引", "式", "的", "分词", "分布式数据库", "数据库", "路径", "依赖", "查询", "效率", "器", "是"]
+["地方", "一次", "火车站", "蕴含", "感情", "都", "火车", "次", "对", "充满", "一", "一个", "含着", "相遇", "车站", "又分", "再次", "相见", "个", "的", "蕴含着", "在这", "盼望", "也", "每一次", "不同", "人们", "故事", "在这里", "分离", "带着", "是", "这里", "告别"]
+["元", "达到", "覆盖", "季度", "家和", "亿", "本季度", "37.5", "200", "同比", "多个", "比增", "地区", "亿元", "营", "本季", "增长", "国家", "国家和地区", "1.2", "收"]
+["ら", "す", "ひ", "と", "で", "ン", "な", "タ", "ナ", "ト", "カ", "混在", "る", "レ", "さ", "ラ", "注文", "テ", "が", "を", "て", "ス", "せ"]
+["text", "full-text", "merge", "on", "depends", "tokenizer", "hot", "reuse", "full", "index", "inverted", "and", "path.", "path", "search", "the"]
+== drop the KV cache under the hub: the pinned dictionaries stay usable, and a parser
+== created afterwards must still produce the same tokens
+ALTER SYSTEM FLUSH KVCACHE CACHE='dict_cache';
+SELECT SLEEP(1);
+SLEEP(1)
+0
+SELECT tokenize('OceanBase 是一款稳定的分布式数据库，全文索引依赖分词器热路径的效率', 'ik');
+tokenize('OceanBase 是一款稳定的分布式数据库，全文索引依赖分词器热路径的效率', 'ik')
+["依赖", "oceanbase", "分词器", "稳定", "路径", "是", "全文索引", "效率", "的", "一款", "热", "分布式数据库"]
+SELECT tokenize(title, 'ik') FROM fts_shared_dict_table ORDER BY id;
+tokenize(title, 'ik')
+["问候", "中", "晨曦", "的"]
+["lasts", "friendship"]
+["心", "感恩", "的"]
+["mixed", "content"]
+["车站", "告别", "的"]
+["数量", "单位", "与"]
+["タ", "ナ", "カ"]
+["全文索引"]
+SELECT COUNT(*) FROM fts_shared_dict_table WHERE MATCH(title) AGAINST('问候');
+COUNT(*)
+1
+SELECT COUNT(*) FROM fts_shared_dict_table WHERE MATCH(body) AGAINST('数据库');
+COUNT(*)
+0
+SELECT COUNT(*) FROM fts_shared_dict_table WHERE MATCH(body) AGAINST('全文索引 分词器');
+COUNT(*)
+1
+== writes after the flush must tokenize through the same dictionary the reads use
+INSERT INTO fts_shared_dict_table(title, body) VALUES ('倒排索引', '新增文档需要在词典缓存失效后仍然得到一致的分词结果，倒排索引合并同样依赖它。');
+SELECT tokenize(title, 'ik') FROM fts_shared_dict_table WHERE id = 9;
+tokenize(title, 'ik')
+["倒排", "索引"]
+SELECT COUNT(*) FROM fts_shared_dict_table WHERE MATCH(body) AGAINST('倒排索引');
+COUNT(*)
+2
+SELECT COUNT(*) FROM fts_shared_dict_table WHERE MATCH(body) AGAINST('分词结果');
+COUNT(*)
+1
+== rebuild an IK index on the same columns after the flush, then compare counts to the
+== first build
+DROP INDEX fti_maxword_all ON fts_shared_dict_table;
+CREATE FULLTEXT INDEX fti_maxword_all ON fts_shared_dict_table(title, body) WITH PARSER ik PARSER_PROPERTIES=(ik_mode="max_word");
+SELECT COUNT(*) FROM fts_shared_dict_table WHERE MATCH(body) AGAINST('数据库');
+COUNT(*)
+0
+SELECT COUNT(*) FROM fts_shared_dict_table WHERE MATCH(title, body) AGAINST('friendship');
+COUNT(*)
+1
+=========================================================================================
+== Part 3: the built-in parsers must stay isolated from each other, since the IK parser
+== now keeps its segmenters in a fixed array instead of a list.
+=========================================================================================
+DROP INDEX fti_maxword_all ON fts_shared_dict_table;
+DROP INDEX fti_smart_body ON fts_shared_dict_table;
+DROP INDEX fti_smart_title ON fts_shared_dict_table;
+CREATE FULLTEXT INDEX fti_beng ON fts_shared_dict_table(title, body) WITH PARSER beng;
+CREATE FULLTEXT INDEX fti_ngram2 ON fts_shared_dict_table(body) WITH PARSER ngram2;
+SELECT tokenize('OceanBase 是一款稳定的数据库', 'beng');
+tokenize('OceanBase 是一款稳定的数据库', 'beng')
+["oceanbase", "是一款稳定的数据库"]
+SELECT tokenize('你好世界', 'beng');
+tokenize('你好世界', 'beng')
+["你好世界"]
+SELECT tokenize("一二三四五 六七八", 'ngram2', '[{"additional_args": [{"min_ngram_size": 2}, {"max_ngram_size": 4}]}]');
+tokenize("一二三四五 六七八", 'ngram2', '[{"additional_args": [{"min_ngram_size": 2}, {"max_ngram_size": 4}]}]')
+["二三四五", "一二三", "三四", "三四五", "七八", "六七八", "六七", "二三", "一二", "四五", "一二三四", "二三四"]
+SELECT tokenize('OceanBase 是一款稳定的数据库', 'space');
+tokenize('OceanBase 是一款稳定的数据库', 'space')
+["oceanbase", "是一款稳定的数据库"]
+SELECT tokenize('OceanBase 是一款稳定的数据库', 'ik');
+tokenize('OceanBase 是一款稳定的数据库', 'ik')
+["oceanbase", "稳定", "是", "数据库", "的", "一款"]
+SELECT COUNT(*) FROM fts_shared_dict_table WHERE MATCH(title, body) AGAINST('friendship');
+COUNT(*)
+1
+SELECT COUNT(*) FROM fts_shared_dict_table WHERE MATCH(body) AGAINST('稳定');
+COUNT(*)
+1
+SELECT COUNT(*) FROM fts_shared_dict_table WHERE MATCH(body) AGAINST('倒排索引');
+COUNT(*)
+2
+DROP TABLE fts_shared_dict_table;
+DROP TABLE fts_char_class_table;
