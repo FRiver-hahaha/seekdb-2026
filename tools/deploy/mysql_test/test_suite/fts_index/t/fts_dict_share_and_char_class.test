@@ -1,0 +1,145 @@
+# owner: FRiver-hahaha
+# owner group: storage
+# tags: fts
+# description: guards the IK tokenizer hot path after the dictionary-sharing / char-classify
+#              / dict-range-lookup changes. Every assertion is an exact tokenizer output or an
+#              exact match count, so a change in classification, dictionary lookup or dictionary
+#              lifetime shows up as a diff instead of a timing change.
+
+--disable_warnings
+DROP TABLE IF EXISTS fts_shared_dict_table;
+DROP TABLE IF EXISTS fts_char_class_table;
+--enable_warnings
+
+alter system set _enable_add_fulltext_index_to_existing_table = true;
+
+--echo =========================================================================================
+--echo == Part 1: character classification. Each CharType branch of do_classify is exercised by
+--echo == a distinct input, because the rewrite decodes the code point once instead of once per
+--echo == predicate, and an off-by-one in that decode changes which branch a character takes.
+--echo =========================================================================================
+
+CREATE TABLE fts_char_class_table (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    txt VARCHAR(256)
+) DEFAULT CHARSET utf8mb4;
+
+INSERT INTO fts_char_class_table(txt) VALUES
+ ('OceanBase是一款非常稳定的数据库'),
+ ('全角ＢＣＤ与ｱＢＣＤ测试'),
+ ('カタカナとひらがな'),
+ ('한국어 테스트'),
+ ('café 你好，世界！12345 67.89%'),
+ ('مرحبا بالعربية'),
+ ('1.2亿用户 all-in-one email@example.com'),
+ ('一龻鿿㐀');
+
+--echo == ENGLISH_LETTER / mixed alnum runs stay joined, punctuation splits them
+SELECT tokenize('OceanBase是一款非常稳定的数据库', 'ik');
+--echo == OTHER_CJK: half-width katakana and full-width latin are handled by their own ranges
+SELECT tokenize('ｱＢｃｄ全角テスト', 'ik');
+--echo == OTHER_CJK: kana and hangul are not merged with Chinese words
+SELECT tokenize('カタカナとひらがな', 'ik');
+SELECT tokenize('한국어 테스트', 'ik');
+--echo == USELESS chars (space, CJK and ASCII punctuation) are dropped, digits keep . and %
+SELECT tokenize('café 你好，世界！12345 67.89%', 'ik');
+--echo == ARABIC_LETTER runs are tokenized without touching the Chinese dictionaries
+SELECT tokenize('مرحبا بالعربية', 'ik');
+--echo == quantifier dictionary path: 1.2亿 and the hyphen/dot joined english tokens
+SELECT tokenize('1.2亿用户 all-in-one email@example.com', 'ik');
+--echo == single characters spanning the first and the last code point of the CJK blocks, which
+--echo == is what the range lookup boundary looks like
+SELECT tokenize('一龻鿿㐀', 'ik');
+
+--echo == same corpus through beng, where classification decides word joining instead of length
+SELECT tokenize('1.2亿用户 all-in-one email@example.com', 'beng');
+SELECT tokenize('Hello-world all-in-one 1.2亿 email@example.com', 'beng');
+
+--echo =========================================================================================
+--echo == Part 2: one dictionary instance per (parser, mode) is shared by every document.
+--echo == Rows alternate character classes, so state left behind in a shared dictionary or in a
+--echo == reused parser between documents would change a later row. Building a second and third
+--echo == IK index on the same table, and rebuilding one, must produce identical tokens and
+--echo == match counts.
+--echo =========================================================================================
+
+CREATE TABLE fts_shared_dict_table (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(256),
+    body  VARCHAR(1024)
+) DEFAULT CHARSET utf8mb4;
+
+INSERT INTO fts_shared_dict_table(title, body) VALUES
+ ('晨曦中的问候', '在每一个新的早晨，当第一缕阳光洒进窗户，一句温暖的问候能够传递出关怀与尊重，让对方感受到一天的美好从这里开始。'),
+ ('Friendship lasts', 'True friendship does not fade with time or distance, it becomes stronger after years of shared experience and mutual support.'),
+ ('感恩的心', '当我们接受他人的帮助或是经历了生活中的点滴幸运时，谢谢这两个字不仅仅是礼貌性的回应，更是内心感激之情的真实写照。'),
+ ('Mixed content', 'OceanBase 是一款稳定的分布式数据库，全文索引依赖分词器热路径的效率，查询则依赖倒排索引的合并。'),
+ ('车站的告别', '火车站是一个充满故事的地方，人们在这里相遇又分离，每一次的告别都带着不同的感情，也蕴含着对再次相见的盼望。'),
+ ('数量与单位', '本季度营收达到1.2亿元，同比增长37.5%，覆盖200多个国家和地区。'),
+ ('カタカナ', 'レストランでカタカナとひらがなを混在させて注文するテストです。'),
+ ('全文索引', 'Full-text search depends on tokenizer reuse and inverted index merge on the hot path.');
+
+SELECT tokenize(title, 'ik') FROM fts_shared_dict_table ORDER BY id;
+SELECT tokenize(body, 'ik') FROM fts_shared_dict_table ORDER BY id;
+
+CREATE FULLTEXT INDEX fti_smart_title ON fts_shared_dict_table(title) WITH PARSER ik PARSER_PROPERTIES=(ik_mode="smart");
+CREATE FULLTEXT INDEX fti_smart_body ON fts_shared_dict_table(body) WITH PARSER ik PARSER_PROPERTIES=(ik_mode="smart");
+CREATE FULLTEXT INDEX fti_maxword_all ON fts_shared_dict_table(title, body) WITH PARSER ik PARSER_PROPERTIES=(ik_mode="max_word");
+
+SELECT COUNT(*) FROM fts_shared_dict_table WHERE MATCH(title) AGAINST('问候');
+SELECT COUNT(*) FROM fts_shared_dict_table WHERE MATCH(body) AGAINST('数据库');
+SELECT COUNT(*) FROM fts_shared_dict_table WHERE MATCH(body) AGAINST('全文索引 分词器');
+SELECT COUNT(*) FROM fts_shared_dict_table WHERE MATCH(body) AGAINST('车站');
+SELECT COUNT(*) FROM fts_shared_dict_table WHERE MATCH(title, body) AGAINST('friendship');
+
+--echo == max_word and smart share nothing, so both dictionaries live in the hub at once and are
+--echo == chosen by the index that owns the parser properties
+SELECT tokenize(body, 'ik', '[{"additional_args": [{"ik_mode": "max_word"}]}]') FROM fts_shared_dict_table ORDER BY id;
+
+--echo == drop the KV cache under the hub: the pinned dictionaries stay usable, and a parser
+--echo == created afterwards must still produce the same tokens
+ALTER SYSTEM FLUSH KVCACHE CACHE='dict_cache';
+SELECT SLEEP(1);
+
+SELECT tokenize('OceanBase 是一款稳定的分布式数据库，全文索引依赖分词器热路径的效率', 'ik');
+SELECT tokenize(title, 'ik') FROM fts_shared_dict_table ORDER BY id;
+SELECT COUNT(*) FROM fts_shared_dict_table WHERE MATCH(title) AGAINST('问候');
+SELECT COUNT(*) FROM fts_shared_dict_table WHERE MATCH(body) AGAINST('数据库');
+SELECT COUNT(*) FROM fts_shared_dict_table WHERE MATCH(body) AGAINST('全文索引 分词器');
+
+--echo == writes after the flush must tokenize through the same dictionary the reads use
+INSERT INTO fts_shared_dict_table(title, body) VALUES ('倒排索引', '新增文档需要在词典缓存失效后仍然得到一致的分词结果，倒排索引合并同样依赖它。');
+SELECT tokenize(title, 'ik') FROM fts_shared_dict_table WHERE id = 9;
+SELECT COUNT(*) FROM fts_shared_dict_table WHERE MATCH(body) AGAINST('倒排索引');
+SELECT COUNT(*) FROM fts_shared_dict_table WHERE MATCH(body) AGAINST('分词结果');
+
+--echo == rebuild an IK index on the same columns after the flush, then compare counts to the
+--echo == first build
+DROP INDEX fti_maxword_all ON fts_shared_dict_table;
+CREATE FULLTEXT INDEX fti_maxword_all ON fts_shared_dict_table(title, body) WITH PARSER ik PARSER_PROPERTIES=(ik_mode="max_word");
+SELECT COUNT(*) FROM fts_shared_dict_table WHERE MATCH(body) AGAINST('数据库');
+SELECT COUNT(*) FROM fts_shared_dict_table WHERE MATCH(title, body) AGAINST('friendship');
+
+--echo =========================================================================================
+--echo == Part 3: the built-in parsers must stay isolated from each other, since the IK parser
+--echo == now keeps its segmenters in a fixed array instead of a list.
+--echo =========================================================================================
+
+DROP INDEX fti_maxword_all ON fts_shared_dict_table;
+DROP INDEX fti_smart_body ON fts_shared_dict_table;
+DROP INDEX fti_smart_title ON fts_shared_dict_table;
+CREATE FULLTEXT INDEX fti_beng ON fts_shared_dict_table(title, body) WITH PARSER beng;
+CREATE FULLTEXT INDEX fti_ngram2 ON fts_shared_dict_table(body) WITH PARSER ngram2;
+
+SELECT tokenize('OceanBase 是一款稳定的数据库', 'beng');
+SELECT tokenize('你好世界', 'beng');
+SELECT tokenize("一二三四五 六七八", 'ngram2', '[{"additional_args": [{"min_ngram_size": 2}, {"max_ngram_size": 4}]}]');
+SELECT tokenize('OceanBase 是一款稳定的数据库', 'space');
+SELECT tokenize('OceanBase 是一款稳定的数据库', 'ik');
+
+SELECT COUNT(*) FROM fts_shared_dict_table WHERE MATCH(title, body) AGAINST('friendship');
+SELECT COUNT(*) FROM fts_shared_dict_table WHERE MATCH(body) AGAINST('稳定');
+SELECT COUNT(*) FROM fts_shared_dict_table WHERE MATCH(body) AGAINST('倒排索引');
+
+DROP TABLE fts_shared_dict_table;
+DROP TABLE fts_char_class_table;

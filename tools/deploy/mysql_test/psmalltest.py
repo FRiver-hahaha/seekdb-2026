@@ -70,6 +70,7 @@ psmall_test=[
 'fts_index.create_fts_index_afterward',
 'fts_index.create_table_with_fts_index',
 'fts_index.drop_index',
+'fts_index.fts_dict_share_and_char_class',
 'fts_index.index_view',
 'fts_index.load_data',
 'fts_index.offline_ddl_with_fts_index',
